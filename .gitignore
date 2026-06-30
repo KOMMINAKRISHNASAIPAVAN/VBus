@@ -1,0 +1,31 @@
+# ---- Node / frontend ----
+node_modules/
+dist/
+build/
+.vite/
+*.local
+
+# ---- Python / backend ----
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ---- Secrets / env ----
+.env
+.env.*
+!.env.example
+
+# ---- Kafka data / logs ----
+kafka-vbus-data/
+kafka-logs/
+*.log
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

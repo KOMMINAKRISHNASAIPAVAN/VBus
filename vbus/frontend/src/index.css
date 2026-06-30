@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+}
+
+@layer components {
+  /* Frosted white surface — chips, nav, popovers */
+  .glass {
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid #e2e8f0;
+  }
+  /* Primary content card */
+  .glass-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px -2px rgba(15,23,42,0.08), 0 2px 8px -2px rgba(15,23,42,0.04);
+  }
+  .btn-primary {
+    @apply bg-vbus-600 hover:bg-vbus-700 text-white font-semibold px-6 py-3 rounded-xl
+           transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-vbus-600/25
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-outline {
+    @apply border border-vbus-600 text-vbus-700 hover:bg-vbus-600 hover:text-white
+           font-semibold px-6 py-3 rounded-xl transition-all duration-200 active:scale-95;
+  }
+  .input-field {
+    @apply w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900
+           placeholder-slate-400 focus:outline-none focus:border-vbus-500 focus:ring-2
+           focus:ring-vbus-500/20 transition-all duration-200;
+  }
+  .seat-available  { @apply bg-white border-slate-300 text-slate-500 hover:border-vbus-500 hover:bg-vbus-50 cursor-pointer; }
+  .seat-selected   { @apply bg-vbus-600 border-vbus-700 text-white; }
+  .seat-booked     { @apply bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed; }
+  .seat-ladies     { @apply bg-pink-100 border-pink-300 text-pink-600 hover:border-pink-400 hover:bg-pink-200 cursor-pointer; }
+}
+
+/* 3D Bus Scene canvas */
+canvas { display: block; }
+
+/* Hide scrollbar for carousels */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Shimmer loader */
+.shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
