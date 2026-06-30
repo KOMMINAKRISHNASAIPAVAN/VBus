@@ -37,3 +37,22 @@ app.include_router(seats.router,    prefix="/api/seats",    tags=["Seats"])
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "VBus API"}
+
+# ---- Serve the built React frontend from the same service (single-URL deploy) ----
+import os
+from fastapi import HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+_DIST = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+if os.path.isdir(_DIST):
+    app.mount("/assets", StaticFiles(directory=os.path.join(_DIST, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    def spa(full_path: str):
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404, detail="Not found")
+        candidate = os.path.join(_DIST, full_path)
+        if full_path and os.path.isfile(candidate):
+            return FileResponse(candidate)
+        return FileResponse(os.path.join(_DIST, "index.html"))  # SPA fallback
