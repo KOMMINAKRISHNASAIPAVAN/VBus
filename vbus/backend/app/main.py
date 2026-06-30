@@ -3,8 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from app.api import auth, buses, routes, bookings, seats, users, search
 from app.core.database import engine, Base
+from app.core.config import settings
 
 Base.metadata.create_all(bind=engine)
+
+_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 
 app = FastAPI(
     title="VBus API",
@@ -17,8 +20,8 @@ app = FastAPI(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=_origins,
+    allow_credentials="*" not in _origins,  # credentials can't be used with wildcard
     allow_methods=["*"],
     allow_headers=["*"],
 )

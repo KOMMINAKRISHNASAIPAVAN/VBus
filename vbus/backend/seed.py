@@ -1,11 +1,25 @@
-"""Run: python seed.py  — wipes & repopulates the vbus MySQL database with demo data"""
+"""Seed demo data. Idempotent: only seeds when the DB is empty.
+Set SEED_RESET=1 to wipe and re-seed. Run: python seed.py"""
+import os
 import sys
 sys.path.insert(0, ".")
 from datetime import time as dtime
 from app.core.database import SessionLocal, engine, Base
 from app.models import *
 
-# Fresh start (safe: no real bookings yet)
+RESET = os.getenv("SEED_RESET", "").lower() in ("1", "true", "yes")
+
+Base.metadata.create_all(bind=engine)
+
+# Skip if already populated (so deploy restarts don't wipe real bookings)
+_check = SessionLocal()
+_existing = _check.query(Bus).count()
+_check.close()
+if _existing and not RESET:
+    print(f"DB already seeded ({_existing} buses) — skipping. Set SEED_RESET=1 to force.")
+    raise SystemExit(0)
+
+# Clean slate, then seed
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()

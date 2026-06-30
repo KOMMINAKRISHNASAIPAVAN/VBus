@@ -1,8 +1,13 @@
 import axios from 'axios'
 
+// In production (Render static site) VITE_API_URL points to the backend host.
+// In dev it's empty, so we use '/api' which the Vite proxy forwards to :8000.
+let API = import.meta.env.VITE_API_URL || ''
+if (API && !/^https?:\/\//.test(API)) API = 'https://' + API
+
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 15000,
+  baseURL: (API ? API : '') + '/api',
+  timeout: 20000,
 })
 
 api.interceptors.response.use(

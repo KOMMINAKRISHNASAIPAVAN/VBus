@@ -3,8 +3,16 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
+# Accept either MySQL or Postgres. Render gives a "postgresql://" URL;
+# normalise it to use the psycopg (v3) driver SQLAlchemy expects.
+_url = settings.DATABASE_URL
+if _url.startswith("postgres://"):
+    _url = "postgresql+psycopg://" + _url[len("postgres://"):]
+elif _url.startswith("postgresql://") and "+psycopg" not in _url:
+    _url = "postgresql+psycopg://" + _url[len("postgresql://"):]
+
 engine = create_engine(
-    settings.DATABASE_URL,
+    _url,
     pool_pre_ping=True,
     pool_recycle=3600,
     echo=False,
