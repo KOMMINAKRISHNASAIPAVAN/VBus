@@ -22,7 +22,7 @@ const BUS_TYPES = ['sleeper', 'semi_sleeper', 'seater', 'luxury', 'volvo']
 const LAYOUT_TYPES = [
   { value: 'seater',       label: 'Seater only' },
   { value: 'sleeper',      label: 'Sleeper only (LB + UB)' },
-  { value: 'semi_sleeper', label: 'Semi-Sleeper (Seater + Sleeper)' },
+  { value: 'semi_sleeper', label: 'Semi-Sleeper (Left: LB+UB | Right: Seater+UB)' },
 ]
 
 const DEFAULT_LAYOUT = {
@@ -32,9 +32,10 @@ const DEFAULT_LAYOUT = {
 }
 
 const totalOf = (l) => {
-  if (l.kind === 'sleeper') return (+l.rows || 0) * ((+l.left || 0) + (+l.right || 0)) * 2  // LB + UB
-  if (l.kind === 'semi_sleeper') return (+l.rows || 0) * ((+l.left || 0) + (+l.right || 0)) + (+l.sleeper_rows || 0) * ((+l.left || 0) + (+l.right || 0)) * 2
-  return (+l.rows || 0) * ((+l.left || 0) + (+l.right || 0))
+  const rows = +l.rows || 0, left = +l.left || 0, right = +l.right || 0
+  if (l.kind === 'sleeper')      return rows * (left + right) * 2          // all LB+UB
+  if (l.kind === 'semi_sleeper') return rows * left * 2 + rows * right * 2 // left=LB+UB, right=Seater+UB
+  return rows * (left + right)
 }
 
 // colour per seat type
@@ -61,35 +62,19 @@ function SeatCell({ num, type, blocked, ladies }) {
 
 function LayoutPreview({ lay }) {
   const left = +lay.left || 0, right = +lay.right || 0
-  const seaterRows = +lay.rows || 0
-  const sleeperRows = +lay.sleeper_rows || 0
+  const rows = +lay.rows || 0
   const blocked = new Set((lay.blocked || []).map(String))
   const ladiesCount = +lay.ladies || 0
   let n = 0
   const ladiesSet = new Set()
 
-  // build all seats first to know which are ladies
-  const allSeats = []
-  if (lay.kind === 'seater' || lay.kind === 'semi_sleeper') {
-    for (let r = 0; r < seaterRows; r++)
-      for (let c = 0; c < left + right; c++) allSeats.push({ type: 'seater' })
-  }
-  if (lay.kind === 'sleeper' || lay.kind === 'semi_sleeper') {
-    const sRows = lay.kind === 'sleeper' ? seaterRows : sleeperRows
-    for (let r = 0; r < sRows; r++) {
-      for (let c = 0; c < left + right; c++) allSeats.push({ type: 'lb' })
-      for (let c = 0; c < left + right; c++) allSeats.push({ type: 'ub' })
-    }
-  }
-  allSeats.forEach((s, i) => { if (i < ladiesCount) ladiesSet.add(String(i + 1)) })
+  // pre-count ladies seats
+  const total = totalOf(lay)
+  for (let i = 1; i <= Math.min(ladiesCount, total); i++) ladiesSet.add(String(i))
 
-  const renderRow = (cols, type) => {
-    const cells = []
-    for (let c = 0; c < cols; c++) {
-      n += 1
-      cells.push(<SeatCell key={n} num={n} type={type} blocked={blocked.has(String(n))} ladies={ladiesSet.has(String(n))} />)
-    }
-    return cells
+  const cell = (type) => {
+    n += 1
+    return <SeatCell key={n} num={n} type={type} blocked={blocked.has(String(n))} ladies={ladiesSet.has(String(n))} />
   }
 
   return (
@@ -97,50 +82,74 @@ function LayoutPreview({ lay }) {
       {/* Legend */}
       <div className="flex flex-wrap gap-2 text-[10px]">
         {lay.kind !== 'sleeper' && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-blue-300 bg-blue-50 inline-block" /> Seater</span>}
-        {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-green-400 bg-green-50 inline-block" /> LB Sleeper</span>}
-        {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-amber-400 bg-amber-50 inline-block" /> UB Sleeper</span>}
+        {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-green-400 bg-green-50 inline-block" /> LB</span>}
+        {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-amber-400 bg-amber-50 inline-block" /> UB</span>}
         {ladiesCount > 0        && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-pink-300 bg-pink-50 inline-block" /> Ladies</span>}
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-slate-300 bg-slate-200 inline-block" /> Blocked</span>
       </div>
 
-      {/* Seater section */}
-      {(lay.kind === 'seater' || lay.kind === 'semi_sleeper') && seaterRows > 0 && (
-        <div>
-          {lay.kind === 'semi_sleeper' && <div className="text-[10px] font-semibold text-blue-600 mb-1 uppercase tracking-wide">Seater Section</div>}
-          <div className="space-y-1">
-            {Array.from({ length: seaterRows }).map((_, r) => (
-              <div key={r} className="flex items-center gap-1">
-                {renderRow(left, 'seater')}
-                {right > 0 && <div className="w-3" />}
-                {renderRow(right, 'seater')}
-              </div>
-            ))}
-          </div>
+      {/* Seater only */}
+      {lay.kind === 'seater' && (
+        <div className="space-y-1">
+          {Array.from({ length: rows }).map((_, r) => (
+            <div key={r} className="flex items-center gap-1">
+              {Array.from({ length: left }).map(() => cell('seater'))}
+              {right > 0 && <div className="w-3" />}
+              {Array.from({ length: right }).map(() => cell('seater'))}
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Sleeper section */}
-      {(lay.kind === 'sleeper' || lay.kind === 'semi_sleeper') && (
-        <div>
-          {lay.kind === 'semi_sleeper' && <div className="text-[10px] font-semibold text-green-700 mb-1 uppercase tracking-wide mt-2">Sleeper Section</div>}
-          <div className="space-y-2">
-            {Array.from({ length: lay.kind === 'sleeper' ? seaterRows : sleeperRows }).map((_, r) => (
-              <div key={r} className="space-y-0.5">
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] text-slate-400 w-4">LB</span>
-                  {renderRow(left, 'lb')}
-                  {right > 0 && <div className="w-3" />}
-                  {renderRow(right, 'lb')}
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] text-slate-400 w-4">UB</span>
-                  {renderRow(left, 'ub')}
-                  {right > 0 && <div className="w-3" />}
-                  {renderRow(right, 'ub')}
-                </div>
+      {/* Sleeper only: left=LB+UB, right=LB+UB */}
+      {lay.kind === 'sleeper' && (
+        <div className="space-y-2">
+          {Array.from({ length: rows }).map((_, r) => (
+            <div key={r} className="space-y-0.5">
+              <div className="flex items-center gap-1">
+                <span className="text-[8px] text-slate-400 w-4">LB</span>
+                {Array.from({ length: left }).map(() => cell('lb'))}
+                {right > 0 && <div className="w-3" />}
+                {Array.from({ length: right }).map(() => cell('lb'))}
               </div>
-            ))}
+              <div className="flex items-center gap-1">
+                <span className="text-[8px] text-slate-400 w-4">UB</span>
+                {Array.from({ length: left }).map(() => cell('ub'))}
+                {right > 0 && <div className="w-3" />}
+                {Array.from({ length: right }).map(() => cell('ub'))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Semi-sleeper: left=LB+UB, right=Seater+UB */}
+      {lay.kind === 'semi_sleeper' && (
+        <div className="space-y-2">
+          <div className="flex gap-6 text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-1">
+            <span style={{ minWidth: left * 28 }}>← Left (LB+UB)</span>
+            <span>Right (Seater+UB) →</span>
           </div>
+          {Array.from({ length: rows }).map((_, r) => (
+            <div key={r} className="space-y-0.5">
+              {/* top row: left=LB, right=Seater */}
+              <div className="flex items-center gap-1">
+                <span className="text-[8px] text-slate-400 w-4">LB</span>
+                {Array.from({ length: left }).map(() => cell('lb'))}
+                {right > 0 && <div className="w-3" />}
+                <span className="text-[8px] text-slate-400 w-6">Seat</span>
+                {Array.from({ length: right }).map(() => cell('seater'))}
+              </div>
+              {/* bottom row: left=UB, right=UB */}
+              <div className="flex items-center gap-1">
+                <span className="text-[8px] text-slate-400 w-4">UB</span>
+                {Array.from({ length: left }).map(() => cell('ub'))}
+                {right > 0 && <div className="w-3" />}
+                <span className="text-[8px] text-slate-400 w-6">UB</span>
+                {Array.from({ length: right }).map(() => cell('ub'))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -170,24 +179,12 @@ function LayoutEditor({ lay, set }) {
       </div>
 
       {/* Row config */}
-      {(isSeater || isMixed) && (
-        <div>
-          <label className={L}>{isMixed ? 'Seater rows' : 'Rows'}</label>
-          <input type="number" min="1" value={lay.rows} onChange={e => set({ ...lay, rows: +e.target.value })} className="input-field" />
-        </div>
-      )}
-      {isSleeper && (
-        <div>
-          <label className={L}>Sleeper rows (each row = LB + UB)</label>
-          <input type="number" min="1" value={lay.rows} onChange={e => set({ ...lay, rows: +e.target.value })} className="input-field" />
-        </div>
-      )}
-      {isMixed && (
-        <div>
-          <label className={L}>Sleeper rows (LB + UB)</label>
-          <input type="number" min="1" value={lay.sleeper_rows || 5} onChange={e => set({ ...lay, sleeper_rows: +e.target.value })} className="input-field" />
-        </div>
-      )}
+      <div>
+        <label className={L}>
+          {isSleeper ? 'Rows (each = LB + UB)' : isMixed ? 'Rows (Left: LB+UB | Right: Seater+UB)' : 'Rows'}
+        </label>
+        <input type="number" min="1" value={lay.rows} onChange={e => set({ ...lay, rows: +e.target.value })} className="input-field" />
+      </div>
 
       {/* Ladies seats */}
       <div>
@@ -209,14 +206,15 @@ function LayoutEditor({ lay, set }) {
           )}
           {(isSleeper || isMixed) && (
             <>
+              {isMixed && <div className="col-span-2 text-[10px] text-slate-400">Left side: LB + UB &nbsp;|&nbsp; Right side: Seater + UB</div>}
               <div>
-                <label className={L}>LB Sleeper fare</label>
+                <label className={L}>LB fare (left side)</label>
                 <input type="number" min="0" placeholder="₹" className="input-field"
                   value={lay.fares?.lower ?? ''}
                   onChange={e => set({ ...lay, fares: { ...(lay.fares||{}), lower: e.target.value === '' ? '' : +e.target.value } })} />
               </div>
               <div>
-                <label className={L}>UB Sleeper fare</label>
+                <label className={L}>UB fare (both sides)</label>
                 <input type="number" min="0" placeholder="₹" className="input-field"
                   value={lay.fares?.upper ?? ''}
                   onChange={e => set({ ...lay, fares: { ...(lay.fares||{}), upper: e.target.value === '' ? '' : +e.target.value } })} />
@@ -237,9 +235,12 @@ function LayoutEditor({ lay, set }) {
       {/* Summary + Preview */}
       <div className="text-xs text-slate-500 flex gap-3 flex-wrap">
         <span>Total seats: <b className="text-slate-900">{totalOf(lay)}</b></span>
-        {(isSeater || isMixed) && <span className="text-blue-600">Seater: {(+lay.rows||0)*(+lay.left+lay.right||0)}</span>}
-        {(isSleeper || isMixed) && <span className="text-green-600">LB: {((isSleeper?+lay.rows:+lay.sleeper_rows)||0)*(+lay.left+lay.right||0)}</span>}
-        {(isSleeper || isMixed) && <span className="text-amber-600">UB: {((isSleeper?+lay.rows:+lay.sleeper_rows)||0)*(+lay.left+lay.right||0)}</span>}
+        {isSeater  && <span className="text-blue-600">Seater: {(+lay.rows||0)*((+lay.left||0)+(+lay.right||0))}</span>}
+        {isSleeper && <span className="text-green-600">LB: {(+lay.rows||0)*((+lay.left||0)+(+lay.right||0))}</span>}
+        {isSleeper && <span className="text-amber-600">UB: {(+lay.rows||0)*((+lay.left||0)+(+lay.right||0))}</span>}
+        {isMixed   && <span className="text-blue-600">Seater (right): {(+lay.rows||0)*(+lay.right||0)}</span>}
+        {isMixed   && <span className="text-green-600">LB (left): {(+lay.rows||0)*(+lay.left||0)}</span>}
+        {isMixed   && <span className="text-amber-600">UB (both): {(+lay.rows||0)*((+lay.left||0)+(+lay.right||0))}</span>}
       </div>
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-x-auto">
         <LayoutPreview lay={lay} />
