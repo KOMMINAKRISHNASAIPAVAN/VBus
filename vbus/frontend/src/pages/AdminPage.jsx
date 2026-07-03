@@ -120,7 +120,10 @@ export default function AdminPage() {
   const [editBus, setEditBus] = useState(null)     // bus being layout-edited
   const [editLay, setEditLay] = useState({ ...DEFAULT_LAYOUT })
   const [stopF, setStopF] = useState({ name: '', city: '', state: '' })
-  const [routeF, setRouteF] = useState({ origin_id: '', destination_id: '', distance_km: '', duration_hrs: '' })
+  const [routeF, setRouteF] = useState({ origin_id: '', destination_id: '', distance_km: '', duration_hrs: '', via: '' })
+  const [selectedRoute, setSelectedRoute] = useState(null)   // route whose stops are being managed
+  const [routeStops, setRouteStops] = useState([])            // stops for selectedRoute
+  const [rsF, setRsF] = useState({ stop_id: '', sequence: '', arrival_time: '', departure_time: '', is_pickup: true, is_drop: true, fare_seater: '', fare_sleeper: '' })
   const [tripF, setTripF] = useState({ bus_id: '', route_id: '', departure_time: '', arrival_time: '', base_price: '' })
 
   const loadCore = async () => {
@@ -168,12 +171,54 @@ export default function AdminPage() {
     e.preventDefault()
     if (!routeF.origin_id || !routeF.destination_id) return toast.error('Pick origin & destination')
     try {
+      const via = routeF.via ? routeF.via.split(',').map(v => v.trim()).filter(Boolean) : []
       await api.post('/admin/routes', {
         origin_id: +routeF.origin_id, destination_id: +routeF.destination_id,
         distance_km: +routeF.distance_km, duration_hrs: +routeF.duration_hrs,
+        via_stops: via,
       })
-      toast.success('Route added'); setRouteF({ origin_id: '', destination_id: '', distance_km: '', duration_hrs: '' }); loadCore()
+      toast.success('Route added')
+      setRouteF({ origin_id: '', destination_id: '', distance_km: '', duration_hrs: '', via: '' })
+      loadCore()
     } catch (e) { err(e, 'Failed to add route') }
+  }
+
+  const delRoute = async (id) => {
+    if (!confirm('Delete this route?')) return
+    try { await api.delete(`/admin/routes/${id}`); toast.success('Route deleted'); loadCore(); if (selectedRoute?.id === id) setSelectedRoute(null) }
+    catch (e) { err(e, 'Failed to delete route') }
+  }
+
+  const openRouteStops = async (r) => {
+    setSelectedRoute(r)
+    try { const res = await api.get(`/admin/routes/${r.id}/stops`); setRouteStops(res.data) }
+    catch { setRouteStops([]) }
+  }
+
+  const addRouteStop = async (e) => {
+    e.preventDefault()
+    if (!rsF.stop_id || !rsF.sequence) return toast.error('Pick stop and sequence')
+    try {
+      await api.post(`/admin/routes/${selectedRoute.id}/stops`, {
+        stop_id: +rsF.stop_id, sequence: +rsF.sequence,
+        arrival_time: rsF.arrival_time || null, departure_time: rsF.departure_time || null,
+        is_pickup: rsF.is_pickup, is_drop: rsF.is_drop,
+        fare_seater: rsF.fare_seater ? +rsF.fare_seater : null,
+        fare_sleeper: rsF.fare_sleeper ? +rsF.fare_sleeper : null,
+      })
+      toast.success('Stop added to route')
+      setRsF({ stop_id: '', sequence: '', arrival_time: '', departure_time: '', is_pickup: true, is_drop: true, fare_seater: '', fare_sleeper: '' })
+      const res = await api.get(`/admin/routes/${selectedRoute.id}/stops`)
+      setRouteStops(res.data)
+    } catch (e) { err(e, 'Failed to add stop') }
+  }
+
+  const delRouteStop = async (rsId) => {
+    try {
+      await api.delete(`/admin/routes/${selectedRoute.id}/stops/${rsId}`)
+      toast.success('Stop removed')
+      setRouteStops(prev => prev.filter(s => s.id !== rsId))
+    } catch (e) { err(e, 'Failed to remove stop') }
   }
 
   const addTrip = async (e) => {
@@ -337,25 +382,146 @@ export default function AdminPage() {
 
         {/* Routes */}
         {tab === 'routes' && (
-          <div className="grid lg:grid-cols-3 gap-6">
-            <form onSubmit={addRoute} className="glass-card p-5 space-y-3">
-              <h3 className="font-semibold text-slate-900">Add Route</h3>
-              <div><label className={label}>From</label><select className="input-field appearance-none" value={routeF.origin_id} onChange={e => setRouteF({ ...routeF, origin_id: e.target.value })}><option value="">Select…</option>{stops.map(s => <option key={s.id} value={s.id}>{s.city}</option>)}</select></div>
-              <div><label className={label}>To</label><select className="input-field appearance-none" value={routeF.destination_id} onChange={e => setRouteF({ ...routeF, destination_id: e.target.value })}><option value="">Select…</option>{stops.map(s => <option key={s.id} value={s.id}>{s.city}</option>)}</select></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className={label}>Distance (km)</label><input type="number" className="input-field" value={routeF.distance_km} onChange={e => setRouteF({ ...routeF, distance_km: e.target.value })} /></div>
-                <div><label className={label}>Duration (hrs)</label><input type="number" step="0.5" className="input-field" value={routeF.duration_hrs} onChange={e => setRouteF({ ...routeF, duration_hrs: e.target.value })} /></div>
-              </div>
-              <button className="btn-primary w-full flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Add Route</button>
-            </form>
-            <div className="lg:col-span-2 glass-card p-5">
-              <h3 className="font-semibold text-slate-900 mb-3">Routes ({routes.length})</h3>
-              <div className="grid sm:grid-cols-2 gap-2 max-h-[28rem] overflow-y-auto">
-                {routes.map(r => (
-                  <div key={r.id} className="border border-slate-100 rounded-xl px-4 py-2.5 text-sm"><span className="font-medium text-slate-900">{r.origin} → {r.destination}</span><span className="text-slate-400"> · {r.distance_km}km · {r.duration_hrs}h</span></div>
-                ))}
+          <div className="space-y-6">
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Add Route Form */}
+              <form onSubmit={addRoute} className="glass-card p-5 space-y-3">
+                <h3 className="font-semibold text-slate-900">Add Route</h3>
+                <div>
+                  <label className={label}>Source (From)</label>
+                  <select className="input-field appearance-none" value={routeF.origin_id} onChange={e => setRouteF({ ...routeF, origin_id: e.target.value })}>
+                    <option value="">Select source…</option>
+                    {stops.map(s => <option key={s.id} value={s.id}>{s.city}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>Destination (To)</label>
+                  <select className="input-field appearance-none" value={routeF.destination_id} onChange={e => setRouteF({ ...routeF, destination_id: e.target.value })}>
+                    <option value="">Select destination…</option>
+                    {stops.map(s => <option key={s.id} value={s.id}>{s.city}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>Via Stops (comma separated)</label>
+                  <input className="input-field" placeholder="e.g. Eluru, Bhimavaram, Tanuku" value={routeF.via} onChange={e => setRouteF({ ...routeF, via: e.target.value })} />
+                  <p className="text-[11px] text-slate-400 mt-1">Intermediate cities between source and destination.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className={label}>Distance (km)</label><input type="number" className="input-field" value={routeF.distance_km} onChange={e => setRouteF({ ...routeF, distance_km: e.target.value })} /></div>
+                  <div><label className={label}>Duration (hrs)</label><input type="number" step="0.5" className="input-field" value={routeF.duration_hrs} onChange={e => setRouteF({ ...routeF, duration_hrs: e.target.value })} /></div>
+                </div>
+                <button className="btn-primary w-full flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Add Route</button>
+              </form>
+
+              {/* Routes List */}
+              <div className="lg:col-span-2 glass-card p-5">
+                <h3 className="font-semibold text-slate-900 mb-3">Routes ({routes.length})</h3>
+                <div className="space-y-2 max-h-[28rem] overflow-y-auto">
+                  {routes.map(r => (
+                    <div key={r.id} className="border border-slate-100 rounded-xl px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-slate-900 text-sm flex items-center gap-2">
+                            <span className="text-green-600">●</span> {r.origin}
+                            {(r.via_stops || []).length > 0 && (
+                              <span className="text-slate-400 text-xs">→ {r.via_stops.join(' → ')}</span>
+                            )}
+                            <span className="text-red-500">●</span> {r.destination}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">{r.distance_km}km · {r.duration_hrs}h · {(r.route_stops || []).length} pickup/drop points</div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => openRouteStops(r)} className="text-xs font-medium px-2.5 py-1 rounded-lg border border-vbus-200 text-vbus-700 hover:bg-vbus-50">Stops</button>
+                          <button onClick={() => delRoute(r.id)} className="text-red-500 hover:text-red-600 p-1.5"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {routes.length === 0 && <p className="text-slate-400 text-center py-8">No routes yet</p>}
+                </div>
               </div>
             </div>
+
+            {/* Route Stops Manager */}
+            {selectedRoute && (
+              <div className="glass-card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">Pickup & Drop Points</h3>
+                    <p className="text-sm text-slate-500">{selectedRoute.origin} → {selectedRoute.destination}</p>
+                  </div>
+                  <button onClick={() => setSelectedRoute(null)} className="text-slate-400 hover:text-slate-600 text-sm">✕ Close</button>
+                </div>
+
+                <div className="grid lg:grid-cols-2 gap-6">
+                  {/* Add stop form */}
+                  <form onSubmit={addRouteStop} className="space-y-3 border border-slate-100 rounded-xl p-4">
+                    <h4 className="text-sm font-semibold text-slate-700">Add Stop to Route</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={label}>Stop</label>
+                        <select className="input-field appearance-none" value={rsF.stop_id} onChange={e => setRsF({ ...rsF, stop_id: e.target.value })}>
+                          <option value="">Select…</option>
+                          {stops.map(s => <option key={s.id} value={s.id}>{s.city}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={label}>Sequence #</label>
+                        <input type="number" min="0" className="input-field" placeholder="0=first" value={rsF.sequence} onChange={e => setRsF({ ...rsF, sequence: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><label className={label}>Arrival time</label><input type="time" className="input-field" value={rsF.arrival_time} onChange={e => setRsF({ ...rsF, arrival_time: e.target.value })} /></div>
+                      <div><label className={label}>Departure time</label><input type="time" className="input-field" value={rsF.departure_time} onChange={e => setRsF({ ...rsF, departure_time: e.target.value })} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><label className={label}>Seater fare (₹)</label><input type="number" className="input-field" placeholder="from origin" value={rsF.fare_seater} onChange={e => setRsF({ ...rsF, fare_seater: e.target.value })} /></div>
+                      <div><label className={label}>Sleeper fare (₹)</label><input type="number" className="input-field" placeholder="from origin" value={rsF.fare_sleeper} onChange={e => setRsF({ ...rsF, fare_sleeper: e.target.value })} /></div>
+                    </div>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={rsF.is_pickup} onChange={e => setRsF({ ...rsF, is_pickup: e.target.checked })} className="rounded" />
+                        <span className="text-green-700 font-medium">Pickup point</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={rsF.is_drop} onChange={e => setRsF({ ...rsF, is_drop: e.target.checked })} className="rounded" />
+                        <span className="text-red-600 font-medium">Drop point</span>
+                      </label>
+                    </div>
+                    <button className="btn-primary w-full flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Add Stop</button>
+                  </form>
+
+                  {/* Stops list */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3">Configured Stops ({routeStops.length})</h4>
+                    <div className="space-y-2 max-h-72 overflow-y-auto">
+                      {routeStops.length === 0 && <p className="text-slate-400 text-sm text-center py-6">No stops configured yet</p>}
+                      {routeStops.map((rs, i) => (
+                        <div key={rs.id} className="flex items-center justify-between border border-slate-100 rounded-xl px-3 py-2.5">
+                          <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 rounded-full bg-vbus-100 text-vbus-700 text-xs font-bold flex items-center justify-center">{rs.sequence}</span>
+                            <div>
+                              <div className="text-sm font-medium text-slate-900">{rs.stop_city}</div>
+                              <div className="text-xs text-slate-500 flex gap-2">
+                                {rs.arrival_time && <span>Arr: {rs.arrival_time}</span>}
+                                {rs.departure_time && <span>Dep: {rs.departure_time}</span>}
+                                {rs.fare_seater && <span>Seater ₹{rs.fare_seater}</span>}
+                                {rs.fare_sleeper && <span>Sleeper ₹{rs.fare_sleeper}</span>}
+                              </div>
+                              <div className="flex gap-1 mt-0.5">
+                                {rs.is_pickup && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">Pickup</span>}
+                                {rs.is_drop && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600">Drop</span>}
+                              </div>
+                            </div>
+                          </div>
+                          <button onClick={() => delRouteStop(rs.id)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
