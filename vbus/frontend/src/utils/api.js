@@ -14,8 +14,12 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('vbus-auth')
-      window.location.href = '/login'
+      const url = err.config?.url || ''
+      // Only force-logout on auth/me or admin calls, not on every 401
+      if (url.includes('/auth/me') || url.includes('/admin/')) {
+        localStorage.removeItem('vbus-auth')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }

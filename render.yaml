@@ -26,6 +26,10 @@ services:
           name: vbus-db
           property: connectionString
       - key: SECRET_KEY
-        generateValue: true
+        value: "vbus-prod-secret-key-2024-xK9mP3qR"
       - key: ALLOWED_ORIGINS
         value: "*"
+      - key: ADMIN_EMAIL
+        value: "admin@vbus.in"
+      - key: ADMIN_PASSWORD
+        value: "admin123"
