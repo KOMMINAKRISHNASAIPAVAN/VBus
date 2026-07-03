@@ -127,14 +127,22 @@ export default function AdminPage() {
   const [tripF, setTripF] = useState({ bus_id: '', route_id: '', departure_time: '', arrival_time: '', base_price: '' })
 
   const loadCore = async () => {
-    const [s, b, st, r, sc] = await Promise.all([
-      api.get('/admin/stats'), api.get('/admin/buses'), api.get('/admin/stops'),
-      api.get('/admin/routes'), api.get('/admin/schedules'),
-    ])
-    setStats(s.data); setBuses(b.data); setStops(st.data); setRoutes(r.data); setSchedules(sc.data)
+    try {
+      const [s, b, st, r, sc] = await Promise.all([
+        api.get('/admin/stats'), api.get('/admin/buses'), api.get('/admin/stops'),
+        api.get('/admin/routes'), api.get('/admin/schedules'),
+      ])
+      setStats(s.data)
+      setBuses(Array.isArray(b.data) ? b.data : [])
+      setStops(Array.isArray(st.data) ? st.data : [])
+      setRoutes(Array.isArray(r.data) ? r.data : [])
+      setSchedules(Array.isArray(sc.data) ? sc.data : [])
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to load admin data')
+    }
   }
-  useEffect(() => { loadCore().catch(() => toast.error('Failed to load admin data')) }, [])
-  useEffect(() => { if (tab === 'bookings') api.get('/admin/bookings').then(r => setBookings(r.data)).catch(() => {}) }, [tab])
+  useEffect(() => { loadCore() }, [])
+  useEffect(() => { if (tab === 'bookings') api.get('/admin/bookings').then(r => setBookings(Array.isArray(r.data) ? r.data : [])).catch(() => {}) }, [tab])
 
   const err = (e, fb) => toast.error(e.response?.data?.detail || fb)
 
@@ -311,13 +319,19 @@ export default function AdminPage() {
         {tab === 'overview' && stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              ['Users', stats.users, Users], ['Buses', stats.buses, Bus], ['Stops', stats.stops, MapPin],
-              ['Routes', stats.routes, RouteIcon], ['Trips', stats.schedules, CalendarClock], ['Bookings', stats.bookings, Ticket],
-              ['Revenue', `₹${Math.round(stats.revenue)}`, IndianRupee],
+              ['Total Buses',       stats.buses,               Bus],
+              ['Total Routes',      stats.routes,              RouteIcon],
+              ['Total Stops',       stats.stops,               MapPin],
+              ['Total Bookings',    stats.bookings,            Ticket],
+              ['Pending Requests',  stats.pending_bookings,    CalendarClock],
+              ['Confirmed',         stats.confirmed_bookings,  Users],
+              ['Available Seats',   stats.available_seats,     Bus],
+              ['Blocked Seats',     stats.blocked_seats,       MapPin],
+              ['Revenue (confirmed)', `₹${Math.round(stats.revenue || 0)}`, IndianRupee],
             ].map(([l, v, Icon]) => (
               <div key={l} className="glass-card p-5">
                 <div className="w-9 h-9 rounded-lg bg-vbus-100 flex items-center justify-center mb-3"><Icon className="w-5 h-5 text-vbus-600" /></div>
-                <div className="text-2xl font-bold text-slate-900">{v}</div>
+                <div className="text-2xl font-bold text-slate-900">{v ?? 0}</div>
                 <div className="text-sm text-slate-500">{l}</div>
               </div>
             ))}
@@ -345,7 +359,7 @@ export default function AdminPage() {
             <div className="lg:col-span-2 glass-card p-5">
               <h3 className="font-semibold text-slate-900 mb-3">Buses ({buses.length})</h3>
               <div className="space-y-2 max-h-[28rem] overflow-y-auto">
-                {buses.map(b => (
+                {buses.filter(b => b.is_active !== false).map(b => (
                   <div key={b.id} className="flex items-center justify-between border border-slate-100 rounded-xl px-4 py-2.5">
                     <div><div className="font-medium text-slate-900 text-sm">{b.name} <span className="text-slate-400">· {b.number}</span></div><div className="text-xs text-slate-500">{b.bus_type} · {b.total_seats} seats · ★{b.rating}</div></div>
                     <div className="flex items-center gap-1">
@@ -421,14 +435,18 @@ export default function AdminPage() {
                     <div key={r.id} className="border border-slate-100 rounded-xl px-4 py-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-slate-900 text-sm flex items-center gap-2">
-                            <span className="text-green-600">●</span> {r.origin}
+                          <div className="font-medium text-slate-900 text-sm flex items-center gap-1 flex-wrap">
+                            <span className="text-green-600">●</span>
+                            <span>{r.origin}</span>
                             {(r.via_stops || []).length > 0 && (
-                              <span className="text-slate-400 text-xs">→ {r.via_stops.join(' → ')}</span>
+                              <span className="text-slate-400 text-xs">→ {(r.via_stops || []).join(' → ')}</span>
                             )}
-                            <span className="text-red-500">●</span> {r.destination}
+                            <span className="text-red-500">●</span>
+                            <span>{r.destination}</span>
                           </div>
-                          <div className="text-xs text-slate-500 mt-0.5">{r.distance_km}km · {r.duration_hrs}h · {(r.route_stops || []).length} pickup/drop points</div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {r.distance_km}km · {r.duration_hrs}h · {(r.route_stops || []).length} pickup/drop points
+                          </div>
                         </div>
                         <div className="flex gap-1">
                           <button onClick={() => openRouteStops(r)} className="text-xs font-medium px-2.5 py-1 rounded-lg border border-vbus-200 text-vbus-700 hover:bg-vbus-50">Stops</button>
