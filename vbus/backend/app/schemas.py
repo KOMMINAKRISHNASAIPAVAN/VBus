@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Any
 from datetime import date, time, datetime
 from enum import Enum
@@ -38,9 +38,9 @@ class Token(BaseModel):
     user: UserOut
 
 class UserUpdate(BaseModel):
-    name: Optional[str]
-    phone: Optional[str]
-    gender: Optional[str]
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    gender: Optional[str] = None
 
 # ── Search ────────────────────────────────────────
 class SearchQuery(BaseModel):
@@ -59,6 +59,7 @@ class BusOut(BaseModel):
     rating: float
     image_url: Optional[str]
     layout: Optional[dict] = None
+    operator: Optional[str] = None
     class Config: from_attributes = True
 
 class StopOut(BaseModel):
@@ -104,8 +105,8 @@ class PassengerInfo(BaseModel):
 class BookingCreate(BaseModel):
     trip_id: int
     passengers: List[PassengerInfo]
-    boarding_stop: Optional[str]
-    dropping_stop: Optional[str]
+    boarding_stop: Optional[str] = None
+    dropping_stop: Optional[str] = None
 
 class BookingOut(BaseModel):
     id: int
@@ -130,15 +131,51 @@ class StopCreate(BaseModel):
     lat: Optional[float] = None
     lng: Optional[float] = None
 
+# ── Route Stops ───────────────────────────────────
+class RouteStopCreate(BaseModel):
+    stop_id: int
+    sequence: int
+    arrival_time: Optional[str] = None
+    departure_time: Optional[str] = None
+    is_pickup: bool = True
+    is_drop: bool = True
+    fare_seater: Optional[float] = None
+    fare_sleeper: Optional[float] = None
+
+class RouteStopOut(BaseModel):
+    id: int
+    route_id: int
+    stop_id: int
+    stop_name: Optional[str] = None
+    stop_city: Optional[str] = None
+    sequence: int
+    arrival_time: Optional[str]
+    departure_time: Optional[str]
+    is_pickup: bool
+    is_drop: bool
+    fare_seater: Optional[float]
+    fare_sleeper: Optional[float]
+    class Config: from_attributes = True
+
 # ── Admin ─────────────────────────────────────────
 class BusCreate(BaseModel):
     name: str
     number: str
     bus_type: str
-    total_seats: Optional[int] = None   # derived from layout if omitted
+    total_seats: Optional[int] = None
     amenities: List[str] = []
     rating: float = 4.2
+    operator: Optional[str] = None
     layout: Optional[dict] = None
+
+class BusUpdate(BaseModel):
+    name: Optional[str] = None
+    number: Optional[str] = None
+    bus_type: Optional[str] = None
+    amenities: Optional[List[str]] = None
+    rating: Optional[float] = None
+    operator: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class AmountUpdate(BaseModel):
     total_amount: float
@@ -151,10 +188,16 @@ class RouteCreate(BaseModel):
     destination_id: int
     distance_km: float
     duration_hrs: float
+    via_stops: Optional[List[str]] = []
 
 class ScheduleCreate(BaseModel):
     bus_id: int
     route_id: int
-    departure_time: str   # "HH:MM"
-    arrival_time: str     # "HH:MM"
+    departure_time: str
+    arrival_time: str
     base_price: float
+
+class SeatBlockRequest(BaseModel):
+    seat_numbers: List[str]
+    trip_id: int
+    action: str  # "block" or "unblock"

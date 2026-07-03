@@ -14,6 +14,8 @@ _json_type = "JSONB" if _is_pg else "JSON"
 for _stmt in (
     "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE",
     f"ALTER TABLE buses ADD COLUMN layout {_json_type}",
+    f"ALTER TABLE buses ADD COLUMN operator VARCHAR(100)",
+    f"ALTER TABLE routes ADD COLUMN via_stops {_json_type}",
 ):
     try:
         with engine.begin() as conn:

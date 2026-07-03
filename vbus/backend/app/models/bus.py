@@ -1,21 +1,22 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Text, Float, ForeignKey, Date, Time, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Float, ForeignKey, Date, Time, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 import enum
 
 class BusType(str, enum.Enum):
-    sleeper   = "sleeper"
+    sleeper      = "sleeper"
     semi_sleeper = "semi_sleeper"
-    seater    = "seater"
-    luxury    = "luxury"
-    volvo     = "volvo"
+    seater       = "seater"
+    luxury       = "luxury"
+    volvo        = "volvo"
 
 class SeatStatus(str, enum.Enum):
     available = "available"
     booked    = "booked"
     locked    = "locked"
     ladies    = "ladies"
+    blocked   = "blocked"
 
 class BookingStatus(str, enum.Enum):
     pending   = "pending"
@@ -30,21 +31,22 @@ class Bus(Base):
     number       = Column(String(20), unique=True, nullable=False)
     bus_type     = Column(Enum(BusType), nullable=False)
     total_seats  = Column(Integer, nullable=False)
-    amenities    = Column(JSON, default=list)   # ["wifi","charging","ac","blanket"]
-    layout       = Column(JSON, nullable=True)  # {decks,rows,left,right,kind,ladies}
+    amenities    = Column(JSON, default=list)
+    layout       = Column(JSON, nullable=True)
     image_url    = Column(String(500), nullable=True)
     rating       = Column(Float, default=4.2)
+    operator     = Column(String(100), nullable=True)
     is_active    = Column(Boolean, default=True)
     schedules    = relationship("Schedule", back_populates="bus")
 
 class Stop(Base):
     __tablename__ = "stops"
-    id       = Column(Integer, primary_key=True, index=True)
-    name     = Column(String(100), nullable=False)
-    city     = Column(String(100), nullable=False)
-    state    = Column(String(100), nullable=False)
-    lat      = Column(Float, nullable=True)
-    lng      = Column(Float, nullable=True)
+    id    = Column(Integer, primary_key=True, index=True)
+    name  = Column(String(100), nullable=False)
+    city  = Column(String(100), nullable=False)
+    state = Column(String(100), nullable=False)
+    lat   = Column(Float, nullable=True)
+    lng   = Column(Float, nullable=True)
 
 class Route(Base):
     __tablename__ = "routes"
@@ -53,9 +55,28 @@ class Route(Base):
     destination_id = Column(Integer, ForeignKey("stops.id"), nullable=False)
     distance_km    = Column(Float, nullable=False)
     duration_hrs   = Column(Float, nullable=False)
+    via_stops      = Column(JSON, default=list)   # list of stop city names (display only)
     origin         = relationship("Stop", foreign_keys=[origin_id])
     destination    = relationship("Stop", foreign_keys=[destination_id])
     schedules      = relationship("Schedule", back_populates="route")
+    route_stops    = relationship("RouteStop", back_populates="route", order_by="RouteStop.sequence")
+
+class RouteStop(Base):
+    """Intermediate + terminal stops for a route with pickup/drop config and fares."""
+    __tablename__ = "route_stops"
+    __table_args__ = (UniqueConstraint("route_id", "sequence", name="uq_route_seq"),)
+    id             = Column(Integer, primary_key=True, index=True)
+    route_id       = Column(Integer, ForeignKey("routes.id"), nullable=False)
+    stop_id        = Column(Integer, ForeignKey("stops.id"), nullable=False)
+    sequence       = Column(Integer, nullable=False)          # 0 = origin, last = destination
+    arrival_time   = Column(String(5), nullable=True)         # "HH:MM"
+    departure_time = Column(String(5), nullable=True)         # "HH:MM"
+    is_pickup      = Column(Boolean, default=True)
+    is_drop        = Column(Boolean, default=True)
+    fare_seater    = Column(Float, nullable=True)             # fare from origin to this stop (seater)
+    fare_sleeper   = Column(Float, nullable=True)             # fare from origin to this stop (sleeper)
+    route          = relationship("Route", back_populates="route_stops")
+    stop           = relationship("Stop")
 
 class Schedule(Base):
     __tablename__ = "schedules"
@@ -72,13 +93,13 @@ class Schedule(Base):
 
 class Trip(Base):
     __tablename__ = "trips"
-    id           = Column(Integer, primary_key=True, index=True)
-    schedule_id  = Column(Integer, ForeignKey("schedules.id"), nullable=False)
-    travel_date  = Column(Date, nullable=False)
-    status       = Column(String(20), default="active")
-    schedule     = relationship("Schedule", back_populates="trips")
-    seats        = relationship("TripSeat", back_populates="trip")
-    bookings     = relationship("Booking", back_populates="trip")
+    id          = Column(Integer, primary_key=True, index=True)
+    schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=False)
+    travel_date = Column(Date, nullable=False)
+    status      = Column(String(20), default="active")
+    schedule    = relationship("Schedule", back_populates="trips")
+    seats       = relationship("TripSeat", back_populates="trip")
+    bookings    = relationship("Booking", back_populates="trip")
 
 class TripSeat(Base):
     __tablename__ = "trip_seats"
@@ -101,7 +122,7 @@ class Booking(Base):
     status         = Column(Enum(BookingStatus), default=BookingStatus.pending)
     total_amount   = Column(Float, nullable=False)
     payment_id     = Column(String(100), nullable=True)
-    passenger_info = Column(JSON, nullable=False)   # list of {name, age, gender, seat}
+    passenger_info = Column(JSON, nullable=False)
     boarding_stop  = Column(String(100), nullable=True)
     dropping_stop  = Column(String(100), nullable=True)
     booked_at      = Column(DateTime(timezone=True), server_default=func.now())
