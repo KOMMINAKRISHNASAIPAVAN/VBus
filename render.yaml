@@ -15,9 +15,8 @@ services:
     rootDir: vbus/backend
     buildCommand: >
       pip install -r requirements.txt &&
-      (npm --prefix ../frontend install && npm --prefix ../frontend run build || echo "Frontend build skipped") &&
-      python seed.py || true
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+      (npm --prefix ../frontend install && npm --prefix ../frontend run build || echo "Frontend build skipped")
+    startCommand: python seed.py; uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
@@ -30,3 +29,5 @@ services:
         generateValue: true
       - key: ALLOWED_ORIGINS
         value: "*"
+      - key: SEED_RESET
+        value: "1"

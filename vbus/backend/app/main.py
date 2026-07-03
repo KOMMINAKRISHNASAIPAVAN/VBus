@@ -9,9 +9,11 @@ from app.core.config import settings
 Base.metadata.create_all(bind=engine)
 
 # Lightweight idempotent migrations for pre-existing tables (MySQL & Postgres)
+_is_pg = settings.DATABASE_URL.startswith("postgres")
+_json_type = "JSONB" if _is_pg else "JSON"
 for _stmt in (
     "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE",
-    "ALTER TABLE buses ADD COLUMN layout JSON",
+    f"ALTER TABLE buses ADD COLUMN layout {_json_type}",
 ):
     try:
         with engine.begin() as conn:
