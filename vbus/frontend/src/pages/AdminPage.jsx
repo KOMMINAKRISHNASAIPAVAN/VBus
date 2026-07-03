@@ -190,14 +190,36 @@ export default function AdminPage() {
   }
 
   const reloadBookings = () => api.get('/admin/bookings').then(r => setBookings(r.data)).catch(() => {})
-  const confirmBk = async (id) => {
-    try { await api.post(`/admin/bookings/${id}/confirm`); toast.success('Booking confirmed'); reloadBookings(); loadCore() }
-    catch (e) { err(e, 'Failed to confirm') }
+  const confirmBk = async (b) => {
+    try {
+      await api.post(`/admin/bookings/${b.id}/confirm`)
+      toast.success('Booking confirmed')
+      reloadBookings(); loadCore()
+      // Send WhatsApp message to user's registered phone
+      const seats = (b.passenger_info || []).map(p => p.seat_number).join(', ')
+      const phone = (b.passenger_info || [])[0]?.phone
+      if (phone) {
+        const msg = encodeURIComponent(
+          `✅ VBus Booking Confirmed!\nPNR: ${b.pnr}\nRoute: ${b.boarding_stop} → ${b.dropping_stop}\nSeats: ${seats}\nAmount: ₹${b.total_amount}\nThank you for choosing VBus! 🚌`
+        )
+        window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank')
+      }
+    } catch (e) { err(e, 'Failed to confirm') }
   }
-  const rejectBk = async (id) => {
+  const rejectBk = async (b) => {
     if (!confirm('Reject this booking and release the seats?')) return
-    try { await api.post(`/admin/bookings/${id}/reject`); toast.success('Booking rejected'); reloadBookings(); loadCore() }
-    catch (e) { err(e, 'Failed to reject') }
+    try {
+      await api.post(`/admin/bookings/${b.id}/reject`)
+      toast.success('Booking rejected')
+      reloadBookings(); loadCore()
+      const phone = (b.passenger_info || [])[0]?.phone
+      if (phone) {
+        const msg = encodeURIComponent(
+          `❌ VBus Booking Rejected\nPNR: ${b.pnr}\nRoute: ${b.boarding_stop} → ${b.dropping_stop}\nYour seats have been released. Please contact us for assistance.`
+        )
+        window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank')
+      }
+    } catch (e) { err(e, 'Failed to reject') }
   }
   const stBadge = {
     pending: 'bg-amber-100 text-amber-700', confirmed: 'bg-green-100 text-green-700',
@@ -358,26 +380,41 @@ export default function AdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="text-left text-slate-500 border-b border-slate-200">
-                  <th className="py-2 pr-4">PNR</th><th className="py-2 pr-4">Route</th><th className="py-2 pr-4">Amount</th><th className="py-2 pr-4">Status</th><th className="py-2 pr-4">Booked</th><th className="py-2">Actions</th>
+                  <th className="py-2 pr-4">PNR</th>
+                  <th className="py-2 pr-4">Bus</th>
+                  <th className="py-2 pr-4">Route</th>
+                  <th className="py-2 pr-4">Seats</th>
+                  <th className="py-2 pr-4">Amount</th>
+                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">Booked</th>
+                  <th className="py-2">Actions</th>
                 </tr></thead>
                 <tbody>
-                  {bookings.map(b => (
-                    <tr key={b.id} className="border-b border-slate-100">
-                      <td className="py-2 pr-4 font-mono text-vbus-600">{b.pnr}</td>
-                      <td className="py-2 pr-4 text-slate-700">{b.boarding_stop} → {b.dropping_stop}</td>
-                      <td className="py-2 pr-4 font-semibold">₹{b.total_amount}</td>
-                      <td className="py-2 pr-4"><span className={`text-xs px-2 py-0.5 rounded-full capitalize ${stBadge[b.status] || 'bg-slate-100'}`}>{b.status}</span></td>
-                      <td className="py-2 pr-4 text-slate-500">{new Date(b.booked_at).toLocaleDateString()}</td>
-                      <td className="py-2">
-                        {b.status === 'pending' ? (
-                          <div className="flex gap-2">
-                            <button onClick={() => confirmBk(b.id)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700">Confirm</button>
-                            <button onClick={() => rejectBk(b.id)} className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Reject</button>
-                          </div>
-                        ) : <span className="text-xs text-slate-400">—</span>}
-                      </td>
-                    </tr>
-                  ))}
+                  {bookings.map(b => {
+                    const seats = (b.passenger_info || []).map(p => p.seat_number).join(', ')
+                    const busName = b.bus_name || '—'
+                    return (
+                      <tr key={b.id} className="border-b border-slate-100">
+                        <td className="py-2 pr-4 font-mono text-vbus-600">{b.pnr}</td>
+                        <td className="py-2 pr-4 text-slate-700 font-medium">{busName}</td>
+                        <td className="py-2 pr-4 text-slate-700">{b.boarding_stop} → {b.dropping_stop}</td>
+                        <td className="py-2 pr-4">
+                          <span className="bg-vbus-50 border border-vbus-200 text-vbus-700 text-xs px-2 py-0.5 rounded-lg font-mono">{seats || '—'}</span>
+                        </td>
+                        <td className="py-2 pr-4 font-semibold">₹{b.total_amount}</td>
+                        <td className="py-2 pr-4"><span className={`text-xs px-2 py-0.5 rounded-full capitalize ${stBadge[b.status] || 'bg-slate-100'}`}>{b.status}</span></td>
+                        <td className="py-2 pr-4 text-slate-500">{new Date(b.booked_at).toLocaleDateString()}</td>
+                        <td className="py-2">
+                          {b.status === 'pending' ? (
+                            <div className="flex gap-2">
+                              <button onClick={() => confirmBk(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700">Confirm</button>
+                              <button onClick={() => rejectBk(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Reject</button>
+                            </div>
+                          ) : <span className="text-xs text-slate-400">—</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
               {bookings.length === 0 && <p className="text-slate-400 text-center py-8">No bookings yet</p>}

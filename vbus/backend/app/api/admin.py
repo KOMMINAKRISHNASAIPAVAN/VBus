@@ -144,11 +144,26 @@ def delete_schedule(schedule_id: int, db: Session = Depends(get_db), admin: User
     return {"message": "Schedule deactivated"}
 
 # ── Bookings & Users (read-only oversight) ────────────────────────────────────
-@router.get("/bookings", response_model=List[BookingDetail])
+@router.get("/bookings")
 def all_bookings(db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
-    return db.query(Booking).order_by(Booking.booked_at.desc()).limit(200).all()
+    bookings = db.query(Booking).order_by(Booking.booked_at.desc()).limit(200).all()
+    result = []
+    for b in bookings:
+        trip = db.query(Trip).filter(Trip.id == b.trip_id).first()
+        bus_name = None
+        if trip and trip.schedule:
+            bus_name = trip.schedule.bus.name
+        d = {
+            "id": b.id, "pnr": b.pnr, "status": b.status,
+            "total_amount": b.total_amount, "passenger_info": b.passenger_info,
+            "boarding_stop": b.boarding_stop, "dropping_stop": b.dropping_stop,
+            "booked_at": b.booked_at, "trip_id": b.trip_id,
+            "bus_name": bus_name,
+        }
+        result.append(d)
+    return result
 
-@router.post("/bookings/{booking_id}/confirm", response_model=BookingDetail)
+@router.post("/bookings/{booking_id}/confirm")
 def confirm_booking(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
     b = db.query(Booking).filter(Booking.id == booking_id).first()
     if not b:
@@ -160,36 +175,7 @@ def confirm_booking(booking_id: int, db: Session = Depends(get_db), admin: User 
     publish_booking_event("booking_confirmed", b)
     return b
 
-@router.post("/bookings/{booking_id}/reject", response_model=BookingDetail)
-def reject_booking(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
-    b = db.query(Booking).filter(Booking.id == booking_id).first()
-    if not b:
-        raise HTTPException(404, "Booking not found")
-    b.status = BookingStatus.cancelled
-    seat_numbers = [p["seat_number"] for p in (b.passenger_info or [])]
-    if seat_numbers:
-        db.query(TripSeat).filter(
-            TripSeat.trip_id == b.trip_id,
-            TripSeat.seat_number.in_(seat_numbers),
-        ).update({"status": SeatStatus.available}, synchronize_session=False)
-    db.commit(); db.refresh(b)
-    publish_booking_event("booking_rejected", b)
-    publish_seat_event("seat_released", b.trip_id, seat_numbers)
-    return b
-
-@router.post("/bookings/{booking_id}/confirm", response_model=BookingDetail)
-def confirm_booking(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
-    b = db.query(Booking).filter(Booking.id == booking_id).first()
-    if not b:
-        raise HTTPException(404, "Booking not found")
-    if b.status == BookingStatus.cancelled:
-        raise HTTPException(400, "Booking is cancelled")
-    b.status = BookingStatus.confirmed
-    db.commit(); db.refresh(b)
-    publish_booking_event("booking_confirmed", b)
-    return b
-
-@router.post("/bookings/{booking_id}/reject", response_model=BookingDetail)
+@router.post("/bookings/{booking_id}/reject")
 def reject_booking(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
     b = db.query(Booking).filter(Booking.id == booking_id).first()
     if not b:

@@ -78,7 +78,14 @@ export default function TicketPage() {
         {booking.status === 'pending' && (
           <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 flex items-start gap-2">
             <Clock className="w-4 h-4 mt-0.5 shrink-0" />
-            <p>Your seats are <b>held</b>. Final price may vary — an agent will be assigned to contact you and arrange payment. You'll get a confirmation once approved.</p>
+            <p>Your seats are <b>held</b>. Admin is verifying your UPI payment. You will receive a <b>WhatsApp message</b> on your registered mobile once confirmed.</p>
+          </div>
+        )}
+
+        {booking.status === 'confirmed' && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800 flex items-start gap-2">
+            <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <p>Payment verified and ticket confirmed! Show this ticket at boarding. A WhatsApp confirmation has been sent to your registered mobile.</p>
           </div>
         )}
 

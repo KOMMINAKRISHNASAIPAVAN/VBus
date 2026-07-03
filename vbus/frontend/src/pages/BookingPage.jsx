@@ -200,7 +200,7 @@ export default function BookingPage() {
           </motion.div>
         )}
 
-        {/* Step 3: Review */}
+        {/* Step 3: Review & Pay */}
         {step === 3 && (
           <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} className="space-y-4">
             <div className="glass-card p-5">
@@ -236,9 +236,29 @@ export default function BookingPage() {
                 <span className="text-xl font-bold text-vbus-600">₹{total}</span>
               </div>
             </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-              <p>This is a booking <b>request</b>. The final price may vary based on availability &amp; fare — <b>our team will contact you</b> to confirm your seats and arrange payment. No payment is taken now.</p>
+
+            {/* Payment Section */}
+            <div className="glass-card p-5">
+              <h3 className="font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-vbus-600" /> Pay via UPI / QR
+              </h3>
+              <p className="text-xs text-slate-500 mb-4">Scan the QR or use the UPI ID below to pay <b className="text-vbus-700">₹{total}</b>. After payment, your booking request will be sent to admin for confirmation.</p>
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <img src="/payment-qr.jpg" alt="Payment QR" className="w-44 h-44 rounded-xl border border-slate-200 object-cover" />
+                <div className="flex-1 space-y-3 w-full">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                    <div className="text-xs text-slate-500 mb-1">UPI ID (PhonePe / GPay / Paytm)</div>
+                    <div className="font-mono font-semibold text-slate-900 text-sm select-all">8520998910-3@ybl</div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                    <div className="text-xs text-slate-500 mb-1">Account Name</div>
+                    <div className="font-semibold text-slate-900 text-sm">HDFC Bank - 1730</div>
+                  </div>
+                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    After paying, click <b>Request Booking</b> below. Admin will verify and confirm your ticket.
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -300,7 +320,7 @@ export default function BookingPage() {
               </div>
               <h3 className="font-bold text-slate-900 text-lg mb-1">Booking request received!</h3>
               <p className="text-slate-600 text-sm mb-2">Your seats are held under PNR <span className="font-mono font-semibold text-vbus-700">{requested.pnr}</span>.</p>
-              <p className="text-slate-500 text-sm mb-5">The <b>final price may vary</b> based on availability. Our team has been notified — <b>an agent will be assigned to contact you shortly</b> to confirm your booking and arrange payment.</p>
+              <p className="text-slate-500 text-sm mb-5">Admin will verify your UPI payment and <b>confirm your ticket</b>. You will receive a <b>WhatsApp message</b> on your registered mobile once confirmed.</p>
               <button onClick={() => navigate(`/ticket/${requested.pnr}`)} className="btn-primary w-full">View my booking</button>
             </motion.div>
           </motion.div>
