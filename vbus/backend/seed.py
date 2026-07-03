@@ -17,7 +17,7 @@ _existing = _check.query(Bus).count()
 _check.close()
 if _existing and not RESET:
     print(f"DB already seeded ({_existing} buses) — skipping. Set SEED_RESET=1 to force.")
-    raise SystemExit(0)
+    sys.exit(0)
 
 # Clean slate, then seed
 Base.metadata.drop_all(bind=engine)

@@ -51,7 +51,7 @@ def _build_seats_for_trip(trip_id: int, bus, base_price: float):
                     seat_type=kind,
                     deck=deck,
                     price=price,
-                    status=SeatStatus.locked if str(n) in blocked else SeatStatus.available,
+                    status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
                 ))
     # reserve some available seats for women (spread across the bus)
     if ladies > 0:
