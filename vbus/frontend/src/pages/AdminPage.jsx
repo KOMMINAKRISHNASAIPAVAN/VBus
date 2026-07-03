@@ -18,89 +18,232 @@ const TABS = [
 
 const BUS_TYPES = ['sleeper', 'semi_sleeper', 'seater', 'luxury', 'volvo']
 
-const DEFAULT_LAYOUT = { kind: 'seater', decks: 1, rows: 10, left: 2, right: 2, ladies: 4, fares: {}, blocked: [] }
-const totalOf = (l) => (+l.decks || 1) * (+l.rows || 0) * ((+l.left || 0) + (+l.right || 0))
+// ── Layout helpers ────────────────────────────────────────────────────────────
+const LAYOUT_TYPES = [
+  { value: 'seater',       label: 'Seater only' },
+  { value: 'sleeper',      label: 'Sleeper only (LB + UB)' },
+  { value: 'semi_sleeper', label: 'Semi-Sleeper (Seater + Sleeper)' },
+]
+
+const DEFAULT_LAYOUT = {
+  kind: 'seater', rows: 10, left: 2, right: 2, ladies: 0,
+  sleeper_rows: 5,           // used when kind = semi_sleeper
+  fares: {}, blocked: [],
+}
+
+const totalOf = (l) => {
+  if (l.kind === 'sleeper') return (+l.rows || 0) * ((+l.left || 0) + (+l.right || 0)) * 2  // LB + UB
+  if (l.kind === 'semi_sleeper') return (+l.rows || 0) * ((+l.left || 0) + (+l.right || 0)) + (+l.sleeper_rows || 0) * ((+l.left || 0) + (+l.right || 0)) * 2
+  return (+l.rows || 0) * ((+l.left || 0) + (+l.right || 0))
+}
+
+// colour per seat type
+const SEAT_COLORS = {
+  seater:  { bg: 'bg-blue-50',   border: 'border-blue-300',   text: 'text-blue-700' },
+  lb:      { bg: 'bg-green-50',  border: 'border-green-400',  text: 'text-green-700' },
+  ub:      { bg: 'bg-amber-50',  border: 'border-amber-400',  text: 'text-amber-700' },
+  blocked: { bg: 'bg-slate-200', border: 'border-slate-300',  text: 'text-slate-400' },
+  ladies:  { bg: 'bg-pink-50',   border: 'border-pink-300',   text: 'text-pink-600' },
+}
+
+function SeatCell({ num, type, blocked, ladies }) {
+  const t = blocked ? 'blocked' : ladies ? 'ladies' : type
+  const c = SEAT_COLORS[t] || SEAT_COLORS.seater
+  const isSlp = type === 'lb' || type === 'ub'
+  return (
+    <div title={`${num} (${t})`}
+      className={`${isSlp ? 'w-6 h-9' : 'w-7 h-7'} rounded border text-[8px] font-bold flex flex-col items-center justify-center ${c.bg} ${c.border} ${c.text}`}>
+      <span>{num}</span>
+      {isSlp && <span className="text-[7px] opacity-70">{type.toUpperCase()}</span>}
+    </div>
+  )
+}
 
 function LayoutPreview({ lay }) {
-  const left = +lay.left || 0, right = +lay.right || 0, rows = +lay.rows || 0, perRow = left + right
-  const decks = +lay.decks === 2 ? ['Lower', 'Upper'] : ['Lower']
-  const cell = lay.kind === 'sleeper' ? 'w-3 h-5' : 'w-4 h-4'
+  const left = +lay.left || 0, right = +lay.right || 0
+  const seaterRows = +lay.rows || 0
+  const sleeperRows = +lay.sleeper_rows || 0
   const blocked = new Set((lay.blocked || []).map(String))
+  const ladiesCount = +lay.ladies || 0
   let n = 0
+  const ladiesSet = new Set()
+
+  // build all seats first to know which are ladies
+  const allSeats = []
+  if (lay.kind === 'seater' || lay.kind === 'semi_sleeper') {
+    for (let r = 0; r < seaterRows; r++)
+      for (let c = 0; c < left + right; c++) allSeats.push({ type: 'seater' })
+  }
+  if (lay.kind === 'sleeper' || lay.kind === 'semi_sleeper') {
+    const sRows = lay.kind === 'sleeper' ? seaterRows : sleeperRows
+    for (let r = 0; r < sRows; r++) {
+      for (let c = 0; c < left + right; c++) allSeats.push({ type: 'lb' })
+      for (let c = 0; c < left + right; c++) allSeats.push({ type: 'ub' })
+    }
+  }
+  allSeats.forEach((s, i) => { if (i < ladiesCount) ladiesSet.add(String(i + 1)) })
+
+  const renderRow = (cols, type) => {
+    const cells = []
+    for (let c = 0; c < cols; c++) {
+      n += 1
+      cells.push(<SeatCell key={n} num={n} type={type} blocked={blocked.has(String(n))} ladies={ladiesSet.has(String(n))} />)
+    }
+    return cells
+  }
+
   return (
-    <div className="flex gap-5">
-      {decks.map(dn => (
-        <div key={dn}>
-          <div className="text-[10px] text-slate-400 mb-1 uppercase tracking-wide">{dn}</div>
+    <div className="space-y-3">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2 text-[10px]">
+        {lay.kind !== 'sleeper' && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-blue-300 bg-blue-50 inline-block" /> Seater</span>}
+        {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-green-400 bg-green-50 inline-block" /> LB Sleeper</span>}
+        {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-amber-400 bg-amber-50 inline-block" /> UB Sleeper</span>}
+        {ladiesCount > 0        && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-pink-300 bg-pink-50 inline-block" /> Ladies</span>}
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-slate-300 bg-slate-200 inline-block" /> Blocked</span>
+      </div>
+
+      {/* Seater section */}
+      {(lay.kind === 'seater' || lay.kind === 'semi_sleeper') && seaterRows > 0 && (
+        <div>
+          {lay.kind === 'semi_sleeper' && <div className="text-[10px] font-semibold text-blue-600 mb-1 uppercase tracking-wide">Seater Section</div>}
           <div className="space-y-1">
-            {Array.from({ length: rows }).map((_, r) => {
-              const cells = []
-              for (let c = 0; c < perRow; c++) { n += 1; cells.push({ num: n, b: blocked.has(String(n)) }) }
-              const cellCls = (x) => `${cell} rounded-sm border ${x.b ? 'border-slate-300 bg-slate-300' : 'border-vbus-300 bg-vbus-50'}`
-              return (
-                <div key={r} className="flex items-center gap-1">
-                  {cells.slice(0, left).map(x => <div key={x.num} title={`Seat ${x.num}`} className={cellCls(x)} />)}
-                  {right > 0 && <div className="w-2" />}
-                  {cells.slice(left).map(x => <div key={x.num} title={`Seat ${x.num}`} className={cellCls(x)} />)}
-                </div>
-              )
-            })}
+            {Array.from({ length: seaterRows }).map((_, r) => (
+              <div key={r} className="flex items-center gap-1">
+                {renderRow(left, 'seater')}
+                {right > 0 && <div className="w-3" />}
+                {renderRow(right, 'seater')}
+              </div>
+            ))}
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Sleeper section */}
+      {(lay.kind === 'sleeper' || lay.kind === 'semi_sleeper') && (
+        <div>
+          {lay.kind === 'semi_sleeper' && <div className="text-[10px] font-semibold text-green-700 mb-1 uppercase tracking-wide mt-2">Sleeper Section</div>}
+          <div className="space-y-2">
+            {Array.from({ length: lay.kind === 'sleeper' ? seaterRows : sleeperRows }).map((_, r) => (
+              <div key={r} className="space-y-0.5">
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] text-slate-400 w-4">LB</span>
+                  {renderRow(left, 'lb')}
+                  {right > 0 && <div className="w-3" />}
+                  {renderRow(right, 'lb')}
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] text-slate-400 w-4">UB</span>
+                  {renderRow(left, 'ub')}
+                  {right > 0 && <div className="w-3" />}
+                  {renderRow(right, 'ub')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 function LayoutEditor({ lay, set }) {
   const L = 'text-xs font-medium text-slate-500 mb-1 block'
+  const isSleeper = lay.kind === 'sleeper'
+  const isMixed   = lay.kind === 'semi_sleeper'
+  const isSeater  = lay.kind === 'seater'
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div><label className={L}>Seat style</label>
-          <select value={lay.kind} onChange={e => set({ ...lay, kind: e.target.value })} className="input-field appearance-none">
-            <option value="seater">Seater</option><option value="sleeper">Sleeper</option>
-          </select></div>
-        <div><label className={L}>Decks</label>
-          <select value={lay.decks} onChange={e => set({ ...lay, decks: +e.target.value })} className="input-field appearance-none">
-            <option value={1}>Single</option><option value={2}>Double</option>
-          </select></div>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div><label className={L}>Rows</label><input type="number" min="1" value={lay.rows} onChange={e => set({ ...lay, rows: +e.target.value })} className="input-field" /></div>
-        <div><label className={L}>Left cols</label><input type="number" min="1" value={lay.left} onChange={e => set({ ...lay, left: +e.target.value })} className="input-field" /></div>
-        <div><label className={L}>Right cols</label><input type="number" min="0" value={lay.right} onChange={e => set({ ...lay, right: +e.target.value })} className="input-field" /></div>
-      </div>
-      <div><label className={L}>Ladies seats</label><input type="number" min="0" value={lay.ladies} onChange={e => set({ ...lay, ladies: +e.target.value })} className="input-field" /></div>
-
-      {/* Fares per seat category */}
-      <div className="pt-1">
-        <label className={L}>Fares (₹)</label>
-        {lay.kind === 'seater' ? (
-          <input type="number" min="0" placeholder="Seater fare" className="input-field"
-            value={lay.fares?.seater ?? ''} onChange={e => set({ ...lay, fares: { ...(lay.fares || {}), seater: e.target.value === '' ? '' : +e.target.value } })} />
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <input type="number" min="0" placeholder="Lower berth ₹" className="input-field"
-              value={lay.fares?.lower ?? ''} onChange={e => set({ ...lay, fares: { ...(lay.fares || {}), lower: e.target.value === '' ? '' : +e.target.value } })} />
-            <input type="number" min="0" placeholder="Upper berth ₹" className="input-field"
-              value={lay.fares?.upper ?? ''} onChange={e => set({ ...lay, fares: { ...(lay.fares || {}), upper: e.target.value === '' ? '' : +e.target.value } })} />
-          </div>
-        )}
-        <p className="text-[11px] text-slate-400 mt-1">Leave blank to use the trip's base price.</p>
-      </div>
-
-      {/* Block seats */}
+    <div className="space-y-4">
+      {/* Layout type dropdown */}
       <div>
-        <label className={L}>Blocked seats</label>
-        <input className="input-field" placeholder="e.g. 3, 4, 21"
+        <label className={L}>Layout Type</label>
+        <select value={lay.kind} onChange={e => set({ ...lay, kind: e.target.value })} className="input-field appearance-none">
+          {LAYOUT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+      </div>
+
+      {/* Column config */}
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className={L}>Left columns</label><input type="number" min="1" max="4" value={lay.left} onChange={e => set({ ...lay, left: +e.target.value })} className="input-field" /></div>
+        <div><label className={L}>Right columns</label><input type="number" min="0" max="4" value={lay.right} onChange={e => set({ ...lay, right: +e.target.value })} className="input-field" /></div>
+      </div>
+
+      {/* Row config */}
+      {(isSeater || isMixed) && (
+        <div>
+          <label className={L}>{isMixed ? 'Seater rows' : 'Rows'}</label>
+          <input type="number" min="1" value={lay.rows} onChange={e => set({ ...lay, rows: +e.target.value })} className="input-field" />
+        </div>
+      )}
+      {isSleeper && (
+        <div>
+          <label className={L}>Sleeper rows (each row = LB + UB)</label>
+          <input type="number" min="1" value={lay.rows} onChange={e => set({ ...lay, rows: +e.target.value })} className="input-field" />
+        </div>
+      )}
+      {isMixed && (
+        <div>
+          <label className={L}>Sleeper rows (LB + UB)</label>
+          <input type="number" min="1" value={lay.sleeper_rows || 5} onChange={e => set({ ...lay, sleeper_rows: +e.target.value })} className="input-field" />
+        </div>
+      )}
+
+      {/* Ladies seats */}
+      <div>
+        <label className={L}>Ladies seats (first N seats reserved)</label>
+        <input type="number" min="0" value={lay.ladies} onChange={e => set({ ...lay, ladies: +e.target.value })} className="input-field" />
+      </div>
+
+      {/* Fares */}
+      <div className="border-t border-slate-100 pt-3">
+        <label className={L}>Fares (₹) — leave blank to use trip base price</label>
+        <div className="grid grid-cols-2 gap-3">
+          {(isSeater || isMixed) && (
+            <div>
+              <label className={L}>Seater fare</label>
+              <input type="number" min="0" placeholder="₹" className="input-field"
+                value={lay.fares?.seater ?? ''}
+                onChange={e => set({ ...lay, fares: { ...(lay.fares||{}), seater: e.target.value === '' ? '' : +e.target.value } })} />
+            </div>
+          )}
+          {(isSleeper || isMixed) && (
+            <>
+              <div>
+                <label className={L}>LB Sleeper fare</label>
+                <input type="number" min="0" placeholder="₹" className="input-field"
+                  value={lay.fares?.lower ?? ''}
+                  onChange={e => set({ ...lay, fares: { ...(lay.fares||{}), lower: e.target.value === '' ? '' : +e.target.value } })} />
+              </div>
+              <div>
+                <label className={L}>UB Sleeper fare</label>
+                <input type="number" min="0" placeholder="₹" className="input-field"
+                  value={lay.fares?.upper ?? ''}
+                  onChange={e => set({ ...lay, fares: { ...(lay.fares||{}), upper: e.target.value === '' ? '' : +e.target.value } })} />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Blocked seats */}
+      <div>
+        <label className={L}>Blocked seats (comma separated seat numbers)</label>
+        <input className="input-field" placeholder="e.g. 3, 7, 12"
           value={(lay.blocked || []).join(', ')}
           onChange={e => set({ ...lay, blocked: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} />
-        <p className="text-[11px] text-slate-400 mt-1">Comma-separated seat numbers — these won't be sold.</p>
       </div>
 
-      <div className="text-xs text-slate-500">Total seats: <b className="text-slate-900">{totalOf(lay)}</b> · <span className="text-slate-400">grey = blocked</span></div>
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-x-auto"><LayoutPreview lay={lay} /></div>
+      {/* Summary + Preview */}
+      <div className="text-xs text-slate-500 flex gap-3 flex-wrap">
+        <span>Total seats: <b className="text-slate-900">{totalOf(lay)}</b></span>
+        {(isSeater || isMixed) && <span className="text-blue-600">Seater: {(+lay.rows||0)*(+lay.left+lay.right||0)}</span>}
+        {(isSleeper || isMixed) && <span className="text-green-600">LB: {((isSleeper?+lay.rows:+lay.sleeper_rows)||0)*(+lay.left+lay.right||0)}</span>}
+        {(isSleeper || isMixed) && <span className="text-amber-600">UB: {((isSleeper?+lay.rows:+lay.sleeper_rows)||0)*(+lay.left+lay.right||0)}</span>}
+      </div>
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-x-auto">
+        <LayoutPreview lay={lay} />
+      </div>
     </div>
   )
 }
