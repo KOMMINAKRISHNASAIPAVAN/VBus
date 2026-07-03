@@ -17,10 +17,18 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 import MyTripsPage from './pages/MyTripsPage'
+import AdminPage from './pages/AdminPage'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuthStore()
   return isAuthenticated ? children : <Navigate to="/login" replace />
+}
+
+function AdminRoute({ children }) {
+  const { isAuthenticated, user } = useAuthStore()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!user?.is_admin) return <Navigate to="/" replace />
+  return children
 }
 
 // Auth pages render standalone — no navbar / footer / help button
@@ -47,6 +55,7 @@ function Shell() {
           <Route path="/ticket/:pnr"  element={<TicketPage />} />
           <Route path="/profile"      element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/my-trips"     element={<ProtectedRoute><MyTripsPage /></ProtectedRoute>} />
+          <Route path="/admin"        element={<AdminRoute><AdminPage /></AdminRoute>} />
         </Routes>
       </main>
       {!isAuthPage && <Footer />}

@@ -9,6 +9,59 @@ from app.schemas import SearchResult, BusOut, StopOut
 
 router = APIRouter()
 
+
+def _build_seats_for_trip(trip_id: int, bus, base_price: float):
+    """Create TripSeat rows from a bus's layout config.
+
+    layout = {decks:1|2, rows:int, left:int, right:int, kind:'seater'|'sleeper', ladies:int}
+    Falls back to a 2+2 seater / sleeper split derived from total_seats.
+    """
+    layout = bus.layout or {}
+    kind = layout.get("kind") or ("sleeper" if bus.bus_type in ("sleeper", "semi_sleeper") else "seater")
+    left = int(layout.get("left") or 2)
+    right = int(layout.get("right") or 2)
+    decks = int(layout.get("decks") or (2 if kind == "sleeper" else 1))
+    per_row = max(1, left + right)
+    total = bus.total_seats or (per_row * 10 * decks)
+    rows = int(layout.get("rows") or -(-total // (per_row * decks)))  # ceil
+    ladies = int(layout.get("ladies") if layout.get("ladies") is not None else max(2, total // 8))
+    fares = layout.get("fares") or {}                                  # {seater/lower/upper: price}
+    blocked = {str(x).strip() for x in (layout.get("blocked") or [])}  # seat numbers to block
+
+    def fare_for(deck):
+        category = "seater" if kind == "seater" else deck   # 'lower' / 'upper'
+        val = fares.get(category)
+        if val not in (None, "", 0, "0"):
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                pass
+        return base_price + (150 if (kind == "sleeper" and deck == "lower") else 0)
+
+    deck_names = ["lower"] if decks == 1 else ["lower", "upper"]
+    seats, n = [], 0
+    for deck in deck_names:
+        price = fare_for(deck)
+        for _r in range(rows):
+            for _c in range(per_row):
+                n += 1
+                seats.append(TripSeat(
+                    trip_id=trip_id,
+                    seat_number=str(n),
+                    seat_type=kind,
+                    deck=deck,
+                    price=price,
+                    status=SeatStatus.locked if str(n) in blocked else SeatStatus.available,
+                ))
+    # reserve some available seats for women (spread across the bus)
+    if ladies > 0:
+        avail = [s for s in seats if s.status == SeatStatus.available]
+        step = max(1, len(avail) // ladies)
+        for s in avail[::step]:
+            s.status = SeatStatus.ladies
+            s.gender_lock = "female"
+    return seats
+
 @router.get("/", response_model=List[SearchResult])
 def search_buses(
     origin: str = Query(...),
@@ -61,28 +114,9 @@ def search_buses(
             db.add(trip)
             db.commit()
             db.refresh(trip)
-            # seed seats
+            # seed seats from the bus's configured layout (or a sensible default)
             bus = sched.bus
-            seat_count = bus.total_seats
-            seats = []
-            half = seat_count // 2
-            for i in range(1, seat_count + 1):
-                deck = "lower" if i <= half else "upper"
-                stype = "lower" if deck == "lower" else "upper"
-                if bus.bus_type in ("seater", "luxury", "volvo"):
-                    stype = "seater"
-                    deck = "lower"
-                # Reserve every 5th seat for women (ladies seat)
-                is_ladies = (i % 5 == 0)
-                seats.append(TripSeat(
-                    trip_id=trip.id,
-                    seat_number=str(i),
-                    seat_type=stype,
-                    deck=deck,
-                    price=sched.base_price + (200 if deck == "lower" else 0),
-                    status=SeatStatus.ladies if is_ladies else SeatStatus.available,
-                    gender_lock="female" if is_ladies else None,
-                ))
+            seats = _build_seats_for_trip(trip.id, bus, sched.base_price)
             db.bulk_save_objects(seats)
             db.commit()
 

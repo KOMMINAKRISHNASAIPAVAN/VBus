@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CheckCircle, Download, Share2, Home, Bus, User, Calendar, MapPin } from 'lucide-react'
+import { CheckCircle, Download, Share2, Home, Bus, User, Calendar, MapPin, Clock, XCircle } from 'lucide-react'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 
@@ -47,18 +47,40 @@ export default function TicketPage() {
 
   const passengers = booking.passenger_info || []
 
+  const S = {
+    pending:   { icon: Clock,       bg: 'bg-amber-100',  fg: 'text-amber-600',  title: 'Booking Requested',  sub: 'Our team will contact you to confirm your seats & fare.' },
+    confirmed: { icon: CheckCircle, bg: 'bg-green-100',  fg: 'text-green-600',  title: 'Booking Confirmed!', sub: 'Your ticket is ready — show it at boarding.' },
+    cancelled: { icon: XCircle,     bg: 'bg-red-100',    fg: 'text-red-600',    title: 'Booking Cancelled',  sub: 'This booking has been cancelled.' },
+    completed: { icon: CheckCircle, bg: 'bg-blue-100',   fg: 'text-blue-600',   title: 'Trip Completed',     sub: 'Thanks for travelling with VBus.' },
+  }[booking.status] || { icon: Clock, bg: 'bg-slate-100', fg: 'text-slate-600', title: booking.status, sub: '' }
+  const SIcon = S.icon
+
+  const badgeCls = {
+    pending:   'bg-amber-50 text-amber-700 border border-amber-200',
+    confirmed: 'bg-green-50 text-green-700 border border-green-200',
+    cancelled: 'bg-red-50 text-red-700 border border-red-200',
+    completed: 'bg-blue-50 text-blue-700 border border-blue-200',
+  }[booking.status] || 'bg-slate-100 text-slate-600 border border-slate-200'
+
   return (
     <div className="min-h-screen bg-hero-gradient pt-20">
       <div className="max-w-lg mx-auto px-4 py-8">
-        {/* Success banner */}
+        {/* Status banner */}
         <motion.div initial={{ scale:0.8, opacity:0 }} animate={{ scale:1, opacity:1 }}
           className="text-center mb-6">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <CheckCircle className="w-9 h-9 text-green-600" />
+          <div className={`w-16 h-16 ${S.bg} rounded-full flex items-center justify-center mx-auto mb-3`}>
+            <SIcon className={`w-9 h-9 ${S.fg}`} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Booking Confirmed!</h1>
-          <p className="text-slate-500 mt-1">Your ticket is ready</p>
+          <h1 className="text-2xl font-bold text-slate-900">{S.title}</h1>
+          <p className="text-slate-500 mt-1">{S.sub}</p>
         </motion.div>
+
+        {booking.status === 'pending' && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 flex items-start gap-2">
+            <Clock className="w-4 h-4 mt-0.5 shrink-0" />
+            <p>Your seats are <b>held</b>. Final price may vary — an agent will be assigned to contact you and arrange payment. You'll get a confirmation once approved.</p>
+          </div>
+        )}
 
         {/* Ticket Card */}
         <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
@@ -73,9 +95,7 @@ export default function TicketPage() {
                   <div className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">PNR Number</div>
                   <div className="text-2xl font-bold text-vbus-600 font-mono tracking-wider">{booking.pnr}</div>
                 </div>
-                <div className={`px-3 py-1.5 rounded-full text-xs font-medium uppercase tracking-wide
-                  ${booking.status === 'confirmed' ? 'bg-green-50 text-green-700 border border-green-200'
-                  : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                <div className={`px-3 py-1.5 rounded-full text-xs font-medium uppercase tracking-wide ${badgeCls}`}>
                   {booking.status}
                 </div>
               </div>

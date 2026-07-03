@@ -1,11 +1,46 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from app.api import auth, buses, routes, bookings, seats, users, search
-from app.core.database import engine, Base
+from sqlalchemy import text
+from app.api import auth, buses, routes, bookings, seats, users, search, admin
+from app.core.database import engine, Base, SessionLocal
 from app.core.config import settings
 
 Base.metadata.create_all(bind=engine)
+
+# Lightweight idempotent migrations for pre-existing tables (MySQL & Postgres)
+for _stmt in (
+    "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE",
+    "ALTER TABLE buses ADD COLUMN layout JSON",
+):
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(_stmt))
+    except Exception:
+        pass  # column already present
+
+# Ensure a default admin account exists (idempotent)
+def _ensure_admin():
+    from app.models.user import User
+    from app.core.security import hash_password
+    db = SessionLocal()
+    try:
+        admin_user = db.query(User).filter(User.email == settings.ADMIN_EMAIL).first()
+        if admin_user is None:
+            db.add(User(
+                name="Administrator", email=settings.ADMIN_EMAIL,
+                password_hash=hash_password(settings.ADMIN_PASSWORD),
+                is_admin=True, is_active=True, is_verified=True,
+            ))
+        else:
+            admin_user.is_admin = True
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+_ensure_admin()
 
 _origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 
@@ -33,6 +68,7 @@ app.include_router(routes.router,   prefix="/api/routes",   tags=["Routes"])
 app.include_router(search.router,   prefix="/api/search",   tags=["Search"])
 app.include_router(bookings.router, prefix="/api/bookings", tags=["Bookings"])
 app.include_router(seats.router,    prefix="/api/seats",    tags=["Seats"])
+app.include_router(admin.router,    prefix="/api/admin",    tags=["Admin"])
 
 @app.get("/api/health")
 def health():

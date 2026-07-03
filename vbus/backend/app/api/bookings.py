@@ -78,7 +78,7 @@ def create_booking(
         pnr=gen_pnr(),
         user_id=current_user.id,
         trip_id=data.trip_id,
-        status=BookingStatus.confirmed,
+        status=BookingStatus.pending,   # awaits admin confirmation
         total_amount=total,
         passenger_info=[p.dict() for p in data.passengers],
         boarding_stop=data.boarding_stop,

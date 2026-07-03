@@ -54,6 +54,7 @@ export default function Navbar() {
               <NavItem to="/">Home</NavItem>
               <NavItem to="/search">Find Buses</NavItem>
               {isAuthenticated && <NavItem to="/my-trips">My Trips</NavItem>}
+              {user?.is_admin && <NavItem to="/admin">Admin</NavItem>}
               <NavItem to="/terms">Terms &amp; Conditions</NavItem>
             </div>
           </div>
@@ -127,6 +128,7 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 <NavItem to="/my-trips" onClick={() => setMobileOpen(false)}>My Trips</NavItem>
+                {user?.is_admin && <NavItem to="/admin" onClick={() => setMobileOpen(false)}>Admin</NavItem>}
                 <NavItem to="/profile" onClick={() => setMobileOpen(false)}>Profile</NavItem>
                 <button onClick={handleLogout} className="block w-full text-left px-3.5 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50">Logout</button>
               </>

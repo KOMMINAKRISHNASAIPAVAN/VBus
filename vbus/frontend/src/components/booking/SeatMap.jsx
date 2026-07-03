@@ -2,13 +2,13 @@ import { motion } from 'framer-motion'
 import { useBookingStore } from '../../store'
 import { clsx } from 'clsx'
 
-function SeatIcon({ seat, selected, onToggle }) {
+function SeatIcon({ seat, selected, onToggle, sleeper }) {
   const status = seat.status
-
   const selectable = status === 'available' || status === 'ladies'
 
   const cls = clsx(
-    'relative w-9 h-10 rounded-t-xl border-2 transition-all duration-150 flex flex-col items-center justify-end pb-1 text-xs font-medium select-none',
+    'relative border-2 transition-all duration-150 flex flex-col items-center justify-end pb-1 text-xs font-medium select-none',
+    sleeper ? 'w-9 h-16 rounded-xl' : 'w-9 h-10 rounded-t-xl',
     selectable && selected && 'seat-selected shadow-lg shadow-vbus-500/40 scale-105',
     status === 'available' && !selected && 'seat-available',
     status === 'ladies'    && !selected && 'seat-ladies',
@@ -25,29 +25,32 @@ function SeatIcon({ seat, selected, onToggle }) {
       className={cls}
       title={`Seat ${seat.seat_number} — ₹${seat.price}${status === 'ladies' ? ' (Ladies seat — women only)' : status !== 'available' ? ` (${status})` : ''}`}
     >
-      {/* Headrest bumps */}
-      <div className="absolute -top-1.5 left-1.5 right-1.5 flex gap-1">
-        <div className="flex-1 h-2 rounded-full bg-current opacity-30" />
-        <div className="flex-1 h-2 rounded-full bg-current opacity-30" />
-      </div>
+      {!sleeper && (
+        <div className="absolute -top-1.5 left-1.5 right-1.5 flex gap-1">
+          <div className="flex-1 h-2 rounded-full bg-current opacity-30" />
+          <div className="flex-1 h-2 rounded-full bg-current opacity-30" />
+        </div>
+      )}
       <span className="text-[10px]">{seat.seat_number}</span>
     </motion.button>
   )
 }
 
-export default function SeatMap({ seats }) {
+export default function SeatMap({ seats, layout }) {
   const { selectedSeats, toggleSeat } = useBookingStore()
   const selected = (s) => !!selectedSeats.find(x => x.seat_number === s.seat_number)
+
+  const left = Math.max(1, +(layout?.left ?? 2))
+  const right = Math.max(0, +(layout?.right ?? 2))
+  const rowSize = left + right
+  const sleeper = (layout?.kind || '') === 'sleeper' || seats.some(s => s.seat_type === 'sleeper')
 
   const lower = seats.filter(s => s.deck === 'lower').sort((a,b) => +a.seat_number - +b.seat_number)
   const upper = seats.filter(s => s.deck === 'upper').sort((a,b) => +a.seat_number - +b.seat_number)
 
-  // Build rows: 2 seats | aisle | 2 seats
   const buildRows = (seatList) => {
     const rows = []
-    for (let i = 0; i < seatList.length; i += 4) {
-      rows.push(seatList.slice(i, i + 4))
-    }
+    for (let i = 0; i < seatList.length; i += rowSize) rows.push(seatList.slice(i, i + rowSize))
     return rows
   }
 
@@ -76,11 +79,11 @@ export default function SeatMap({ seats }) {
               <div key={ri} className="flex items-center gap-2">
                 <span className="text-xs text-slate-400 w-4 text-right">{ri+1}</span>
                 <div className="flex gap-1.5">
-                  {row.slice(0,2).map(s => <SeatIcon key={s.seat_number} seat={s} selected={selected(s)} onToggle={toggleSeat} />)}
+                  {row.slice(0, left).map(s => <SeatIcon key={s.seat_number} seat={s} selected={selected(s)} onToggle={toggleSeat} sleeper={sleeper} />)}
                 </div>
-                <div className="w-5 text-center text-xs text-slate-300">│</div>
+                {right > 0 && <div className="w-5 text-center text-xs text-slate-300">│</div>}
                 <div className="flex gap-1.5">
-                  {row.slice(2).map(s => <SeatIcon key={s.seat_number} seat={s} selected={selected(s)} onToggle={toggleSeat} />)}
+                  {row.slice(left).map(s => <SeatIcon key={s.seat_number} seat={s} selected={selected(s)} onToggle={toggleSeat} sleeper={sleeper} />)}
                 </div>
               </div>
             ))}

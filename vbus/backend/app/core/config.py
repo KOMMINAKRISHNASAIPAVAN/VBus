@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     # Comma-separated list of allowed CORS origins ("*" allows all)
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://localhost:5174"
 
+    # Default admin account (auto-created on startup; override in prod)
+    ADMIN_EMAIL: str = "admin@vbus.in"
+    ADMIN_PASSWORD: str = "admin123"
+
     # Kafka
     KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
     KAFKA_TOPIC_BOOKINGS: str = "vbus.bookings"

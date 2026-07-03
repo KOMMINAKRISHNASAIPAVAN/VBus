@@ -31,6 +31,7 @@ class Bus(Base):
     bus_type     = Column(Enum(BusType), nullable=False)
     total_seats  = Column(Integer, nullable=False)
     amenities    = Column(JSON, default=list)   # ["wifi","charging","ac","blanket"]
+    layout       = Column(JSON, nullable=True)  # {decks,rows,left,right,kind,ladies}
     image_url    = Column(String(500), nullable=True)
     rating       = Column(Float, default=4.2)
     is_active    = Column(Boolean, default=True)

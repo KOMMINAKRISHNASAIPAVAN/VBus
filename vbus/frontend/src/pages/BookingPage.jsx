@@ -19,6 +19,7 @@ export default function BookingPage() {
   const [form, setForm] = useState([])
   const [booking, setBooking] = useState(false)
   const [alertMsg, setAlertMsg] = useState('')
+  const [requested, setRequested] = useState(null)
 
   useEffect(() => {
     api.get(`/seats/${tripId}`)
@@ -86,8 +87,8 @@ export default function BookingPage() {
         boarding_stop: selectedTrip.origin.city,
         dropping_stop: selectedTrip.destination.city,
       })
-      toast.success('Booking confirmed!')
-      navigate(`/ticket/${data.pnr}`)
+      toast.success('Booking request submitted')
+      setRequested(data)
     } catch (e) {
       setAlertMsg(e.response?.data?.detail || 'Booking failed. Please try again.')
     } finally {
@@ -142,7 +143,7 @@ export default function BookingPage() {
                   <div className="w-8 h-8 border-2 border-vbus-500 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : (
-                <SeatMap seats={seats} />
+                <SeatMap seats={seats} layout={selectedTrip?.bus?.layout} />
               )}
             </div>
           </motion.div>
@@ -235,9 +236,9 @@ export default function BookingPage() {
                 <span className="text-xl font-bold text-vbus-600">₹{total}</span>
               </div>
             </div>
-            <div className="bg-vbus-50 border border-vbus-200 rounded-xl p-4 text-sm text-slate-600 flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-vbus-600 mt-0.5 shrink-0" />
-              <p>Secure payment processed. No hidden charges. Free cancellation up to 2 hours before departure.</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p>This is a booking <b>request</b>. The final price may vary based on availability &amp; fare — <b>our team will contact you</b> to confirm your seats and arrange payment. No payment is taken now.</p>
             </div>
           </motion.div>
         )}
@@ -255,8 +256,8 @@ export default function BookingPage() {
           ) : (
             <button onClick={handleBook} disabled={booking} className="btn-primary flex items-center gap-2 min-w-40">
               {booking
-                ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Booking...</>
-                : <><Check className="w-4 h-4" /> Confirm &amp; Pay ₹{total}</>}
+                ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting...</>
+                : <><Check className="w-4 h-4" /> Request Booking</>}
             </button>
           )}
         </div>
@@ -279,6 +280,28 @@ export default function BookingPage() {
               <h3 className="font-semibold text-slate-900 text-lg mb-1">Seat not allowed</h3>
               <p className="text-slate-600 text-sm mb-5 leading-relaxed">{alertMsg}</p>
               <button onClick={() => setAlertMsg('')} className="btn-primary w-full">Got it</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Booking-request received popup */}
+      <AnimatePresence>
+        {requested && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-lift max-w-md w-full p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                <Check className="w-7 h-7 text-green-600" />
+              </div>
+              <h3 className="font-bold text-slate-900 text-lg mb-1">Booking request received!</h3>
+              <p className="text-slate-600 text-sm mb-2">Your seats are held under PNR <span className="font-mono font-semibold text-vbus-700">{requested.pnr}</span>.</p>
+              <p className="text-slate-500 text-sm mb-5">The <b>final price may vary</b> based on availability. Our team has been notified — <b>an agent will be assigned to contact you shortly</b> to confirm your booking and arrange payment.</p>
+              <button onClick={() => navigate(`/ticket/${requested.pnr}`)} className="btn-primary w-full">View my booking</button>
             </motion.div>
           </motion.div>
         )}

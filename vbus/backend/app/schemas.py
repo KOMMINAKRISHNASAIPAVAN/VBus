@@ -28,6 +28,7 @@ class UserOut(BaseModel):
     gender: Optional[str]
     avatar_url: Optional[str]
     is_active: bool
+    is_admin: bool = False
     created_at: datetime
     class Config: from_attributes = True
 
@@ -57,6 +58,7 @@ class BusOut(BaseModel):
     amenities: List[str]
     rating: float
     image_url: Optional[str]
+    layout: Optional[dict] = None
     class Config: from_attributes = True
 
 class StopOut(BaseModel):
@@ -125,5 +127,31 @@ class StopCreate(BaseModel):
     name: str
     city: str
     state: str
-    lat: Optional[float]
-    lng: Optional[float]
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
+# ── Admin ─────────────────────────────────────────
+class BusCreate(BaseModel):
+    name: str
+    number: str
+    bus_type: str
+    total_seats: Optional[int] = None   # derived from layout if omitted
+    amenities: List[str] = []
+    rating: float = 4.2
+    layout: Optional[dict] = None
+
+class LayoutUpdate(BaseModel):
+    layout: dict
+
+class RouteCreate(BaseModel):
+    origin_id: int
+    destination_id: int
+    distance_km: float
+    duration_hrs: float
+
+class ScheduleCreate(BaseModel):
+    bus_id: int
+    route_id: int
+    departure_time: str   # "HH:MM"
+    arrival_time: str     # "HH:MM"
+    base_price: float
