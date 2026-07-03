@@ -389,7 +389,13 @@ export default function AdminPage() {
         {/* Bookings */}
         {tab === 'bookings' && (
           <div className="glass-card p-5">
-            <h3 className="font-semibold text-slate-900 mb-3">All Bookings ({bookings.length})</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-slate-900">All Bookings ({bookings.length})</h3>
+              <div className="flex gap-3 text-xs">
+                <span className="flex items-center gap-1 text-amber-600"><span>✏️</span> Fare editable (pending)</span>
+                <span className="flex items-center gap-1 text-slate-500"><span>🔒</span> Fare locked (confirmed)</span>
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="text-left text-slate-500 border-b border-slate-200">
@@ -415,18 +421,28 @@ export default function AdminPage() {
                           <span className="bg-vbus-50 border border-vbus-200 text-vbus-700 text-xs px-2 py-0.5 rounded-lg font-mono">{seats || '—'}</span>
                         </td>
                         <td className="py-2 pr-4">
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-400 text-xs">₹</span>
-                            <input
-                              type="number" min="1"
-                              value={editAmount[b.id] ?? b.total_amount}
-                              onChange={e => setEditAmount(prev => ({ ...prev, [b.id]: e.target.value }))}
-                              className="w-24 border border-slate-200 rounded-lg px-2 py-1 text-sm font-semibold text-slate-900 focus:border-vbus-400 focus:outline-none"
-                            />
-                            {editAmount[b.id] !== undefined && String(editAmount[b.id]) !== String(b.total_amount) && (
-                              <button onClick={() => updateAmount(b)} className="text-xs font-medium px-2 py-1 rounded-lg bg-vbus-600 text-white hover:bg-vbus-700">Save</button>
-                            )}
-                          </div>
+                          {b.status === 'confirmed' ? (
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold text-slate-900">₹{b.total_amount}</span>
+                              <span title="Fare locked after confirmation" className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-400 ml-1">🔒</span>
+                            </div>
+                          ) : b.status === 'cancelled' ? (
+                            <span className="font-semibold text-slate-400 line-through">₹{b.total_amount}</span>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-400 text-xs">₹</span>
+                              <input
+                                type="number" min="1"
+                                value={editAmount[b.id] ?? b.total_amount}
+                                onChange={e => setEditAmount(prev => ({ ...prev, [b.id]: e.target.value }))}
+                                className="w-24 border border-amber-300 rounded-lg px-2 py-1 text-sm font-semibold text-slate-900 focus:border-vbus-400 focus:outline-none bg-amber-50"
+                              />
+                              {editAmount[b.id] !== undefined && String(editAmount[b.id]) !== String(b.total_amount) && (
+                                <button onClick={() => updateAmount(b)} className="text-xs font-medium px-2 py-1 rounded-lg bg-vbus-600 text-white hover:bg-vbus-700">Save</button>
+                              )}
+                              <span title="Editable until confirmed" className="text-xs text-amber-500">✏️</span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-2 pr-4"><span className={`text-xs px-2 py-0.5 rounded-full capitalize ${stBadge[b.status] || 'bg-slate-100'}`}>{b.status}</span></td>
                         <td className="py-2 pr-4 text-slate-500">{new Date(b.booked_at).toLocaleDateString()}</td>
