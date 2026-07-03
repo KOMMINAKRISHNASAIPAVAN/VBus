@@ -140,6 +140,9 @@ class BusCreate(BaseModel):
     rating: float = 4.2
     layout: Optional[dict] = None
 
+class AmountUpdate(BaseModel):
+    total_amount: float
+
 class LayoutUpdate(BaseModel):
     layout: dict
 

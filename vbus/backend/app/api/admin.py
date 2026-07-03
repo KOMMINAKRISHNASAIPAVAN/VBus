@@ -9,7 +9,7 @@ from app.models.user import User
 from app.models.bus import Bus, Stop, Route, Schedule, Trip, TripSeat, Booking, SeatStatus, BookingStatus
 from app.schemas import (
     BusOut, StopOut, StopCreate, BusCreate, RouteCreate, ScheduleCreate,
-    BookingDetail, UserOut, LayoutUpdate,
+    BookingDetail, UserOut, LayoutUpdate, AmountUpdate,
 )
 from app.kafka.producer import publish_booking_event, publish_seat_event
 
@@ -162,6 +162,17 @@ def all_bookings(db: Session = Depends(get_db), admin: User = Depends(get_admin_
         }
         result.append(d)
     return result
+
+@router.patch("/bookings/{booking_id}/amount")
+def update_booking_amount(booking_id: int, data: AmountUpdate, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
+    b = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if b.status == BookingStatus.cancelled:
+        raise HTTPException(400, "Cannot update a cancelled booking")
+    b.total_amount = data.total_amount
+    db.commit(); db.refresh(b)
+    return {"id": b.id, "total_amount": b.total_amount}
 
 @router.post("/bookings/{booking_id}/confirm")
 def confirm_booking(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):

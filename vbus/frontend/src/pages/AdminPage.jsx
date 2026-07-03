@@ -189,7 +189,20 @@ export default function AdminPage() {
     } catch (e) { err(e, 'Failed to add trip') }
   }
 
+  const [editAmount, setEditAmount] = useState({}) // { [booking_id]: value }
+
   const reloadBookings = () => api.get('/admin/bookings').then(r => setBookings(r.data)).catch(() => {})
+
+  const updateAmount = async (b) => {
+    const val = parseFloat(editAmount[b.id])
+    if (!val || val <= 0) return toast.error('Enter a valid amount')
+    try {
+      await api.patch(`/admin/bookings/${b.id}/amount`, { total_amount: val })
+      toast.success('Amount updated')
+      setEditAmount(prev => { const n = { ...prev }; delete n[b.id]; return n })
+      reloadBookings()
+    } catch (e) { err(e, 'Failed to update amount') }
+  }
   const confirmBk = async (b) => {
     try {
       await api.post(`/admin/bookings/${b.id}/confirm`)
@@ -401,7 +414,20 @@ export default function AdminPage() {
                         <td className="py-2 pr-4">
                           <span className="bg-vbus-50 border border-vbus-200 text-vbus-700 text-xs px-2 py-0.5 rounded-lg font-mono">{seats || '—'}</span>
                         </td>
-                        <td className="py-2 pr-4 font-semibold">₹{b.total_amount}</td>
+                        <td className="py-2 pr-4">
+                          <div className="flex items-center gap-1">
+                            <span className="text-slate-400 text-xs">₹</span>
+                            <input
+                              type="number" min="1"
+                              value={editAmount[b.id] ?? b.total_amount}
+                              onChange={e => setEditAmount(prev => ({ ...prev, [b.id]: e.target.value }))}
+                              className="w-24 border border-slate-200 rounded-lg px-2 py-1 text-sm font-semibold text-slate-900 focus:border-vbus-400 focus:outline-none"
+                            />
+                            {editAmount[b.id] !== undefined && String(editAmount[b.id]) !== String(b.total_amount) && (
+                              <button onClick={() => updateAmount(b)} className="text-xs font-medium px-2 py-1 rounded-lg bg-vbus-600 text-white hover:bg-vbus-700">Save</button>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-2 pr-4"><span className={`text-xs px-2 py-0.5 rounded-full capitalize ${stBadge[b.status] || 'bg-slate-100'}`}>{b.status}</span></td>
                         <td className="py-2 pr-4 text-slate-500">{new Date(b.booked_at).toLocaleDateString()}</td>
                         <td className="py-2">
