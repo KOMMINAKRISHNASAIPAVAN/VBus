@@ -22,7 +22,9 @@ export default function BookingPage() {
   const [requested, setRequested] = useState(null)
 
   useEffect(() => {
-    api.get(`/seats/${tripId}`)
+    const boarding = selectedTrip?.origin?.city || ''
+    const dropping = selectedTrip?.destination?.city || ''
+    api.get(`/seats/${tripId}`, { params: { boarding, dropping } })
       .then(({ data }) => setSeats(data))
       .catch(() => toast.error('Failed to load seats'))
       .finally(() => setLoadingSeats(false))

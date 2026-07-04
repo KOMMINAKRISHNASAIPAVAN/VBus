@@ -56,6 +56,11 @@ function Seat({ seat, selected, onToggle }) {
       <span className={`text-[10px] font-medium ${textCol}`}>
         {isSold ? 'Sold' : `₹${price}`}
       </span>
+      {!isSold && isSlp && (
+        <span className={`text-[9px] ${seat_type === 'lower' ? 'text-green-500' : 'text-amber-500'}`}>
+          {seat_type === 'lower' ? 'LB' : 'UB'}
+        </span>
+      )}
     </motion.button>
   )
 }
