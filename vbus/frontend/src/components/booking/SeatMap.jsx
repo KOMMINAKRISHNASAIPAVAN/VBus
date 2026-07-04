@@ -180,61 +180,54 @@ export default function SeatMap({ seats, layout }) {
   }
 
   // ── SEMI-SLEEPER ──────────────────────────────────────────────────────────
-  // Lower deck: left cols = LB sleeper berths, right cols = Seater chairs
-  // Upper deck: all cols = UB sleeper berths
+  // Left row: LB (lower) + UB-left (upper)
+  // Right row: Seater (lower) + UB-right (upper)
   if (kind === 'semi_sleeper') {
-    // seats numbered per row: left-LB, right-Seater, all-UB
-    const lbAll = [], seaterAll = [], ubAll = []
+    // seats numbered per row: left-LB, right-Seater, UB-left, UB-right
+    const lbAll = [], seaterAll = [], ubLeftAll = [], ubRightAll = []
     let idx = 0
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < left;  c++) lbAll.push(sorted[idx++])
       for (let c = 0; c < right; c++) seaterAll.push(sorted[idx++])
-      for (let c = 0; c < left + right; c++) ubAll.push(sorted[idx++])
+      for (let c = 0; c < left;  c++) ubLeftAll.push(sorted[idx++])
+      for (let c = 0; c < right; c++) ubRightAll.push(sorted[idx++])
     }
 
-    // build columns
-    const lbCols     = Array.from({ length: left },         (_, c) => lbAll.filter((_, i) => i % left === c))
-    const seaterCols  = Array.from({ length: right },        (_, c) => seaterAll.filter((_, i) => i % right === c))
-    const ubCols      = Array.from({ length: left + right }, (_, c) => ubAll.filter((_, i) => i % (left + right) === c))
+    const lbCols      = Array.from({ length: left },  (_, c) => lbAll.filter((_, i) => i % left === c))
+    const seaterCols  = Array.from({ length: right }, (_, c) => seaterAll.filter((_, i) => i % right === c))
+    const ubLeftCols  = Array.from({ length: left },  (_, c) => ubLeftAll.filter((_, i) => i % left === c))
+    const ubRightCols = Array.from({ length: right }, (_, c) => ubRightAll.filter((_, i) => i % right === c))
+
+    const SidePanel = ({ title, lowerCols, lowerType, upperCols, showSteering }) => (
+      <DeckPanel title={title} showSteering={showSteering}>
+        <div className="space-y-2">
+          <div className="text-xs text-slate-400 font-medium">Lower</div>
+          <div className="flex gap-2 items-start">
+            {lowerCols.map((col, ci) => (
+              <div key={ci} className="flex flex-col gap-1.5 flex-1">
+                {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type={lowerType} />)}
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-dashed border-slate-300 my-1" />
+          <div className="text-xs text-slate-400 font-medium">Upper</div>
+          <div className="flex gap-2 items-start">
+            {upperCols.map((col, ci) => (
+              <div key={ci} className="flex flex-col gap-1.5 flex-1">
+                {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
+              </div>
+            ))}
+          </div>
+        </div>
+      </DeckPanel>
+    )
 
     return (
       <div className="space-y-5">
         <Legend kind={kind} />
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Lower deck */}
-          <DeckPanel title="Lower deck" showSteering>
-            <div className="flex gap-2 items-start">
-              {/* LB berths (left cols) */}
-              {lbCols.map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-1.5 flex-1">
-                  {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
-                </div>
-              ))}
-              <Aisle />
-              {/* Seater chairs (right cols) */}
-              {seaterCols.map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-2 flex-1">
-                  {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="seater" />)}
-                </div>
-              ))}
-            </div>
-          </DeckPanel>
-          {/* Upper deck */}
-          <DeckPanel title="Upper deck">
-            <div className="flex gap-2 items-start">
-              {ubCols.slice(0, left).map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-1.5 flex-1">
-                  {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
-                </div>
-              ))}
-              <Aisle />
-              {ubCols.slice(left).map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-1.5 flex-1">
-                  {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
-                </div>
-              ))}
-            </div>
-          </DeckPanel>
+          <SidePanel title="Left row (LB + UB)" lowerCols={lbCols} lowerType="sleeper" upperCols={ubLeftCols} showSteering />
+          <SidePanel title="Right row (Seater + UB)" lowerCols={seaterCols} lowerType="seater" upperCols={ubRightCols} />
         </div>
         <SelectedSummary />
       </div>
@@ -248,22 +241,14 @@ export default function SeatMap({ seats, layout }) {
 function Legend({ kind }) {
   return (
     <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-      <div className="flex items-center gap-1.5">
-        <div className="w-8 h-5 rounded-lg border-2 border-green-400 bg-white" />
-        Available
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-8 h-5 rounded-lg border-2 border-green-500 bg-green-50" />
-        Selected
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-8 h-5 rounded-lg border-2 border-slate-200 bg-slate-100" />
-        Sold
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-8 h-5 rounded-lg border-2 border-pink-400 bg-pink-50" />
-        Ladies
-      </div>
+      <div className="flex items-center gap-1.5"><div className="w-8 h-5 rounded-lg border-2 border-green-400 bg-white" />Available</div>
+      <div className="flex items-center gap-1.5"><div className="w-8 h-5 rounded-lg border-2 border-green-500 bg-green-50" />Selected</div>
+      <div className="flex items-center gap-1.5"><div className="w-8 h-5 rounded-lg border-2 border-slate-200 bg-slate-100" />Sold</div>
+      <div className="flex items-center gap-1.5"><div className="w-8 h-5 rounded-lg border-2 border-pink-400 bg-pink-50" />Ladies</div>
+      {kind === 'semi_sleeper' && <>
+        <div className="flex items-center gap-1.5"><span className="w-8 h-5 rounded-lg border-2 border-green-500 bg-white inline-block" />LB</div>
+        <div className="flex items-center gap-1.5"><span className="w-8 h-5 rounded-lg border-2 border-amber-400 bg-white inline-block" />UB</div>
+      </>}
     </div>
   )
 }
