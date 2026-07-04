@@ -34,7 +34,7 @@ const DEFAULT_LAYOUT = {
 const totalOf = (l) => {
   const rows = +l.rows || 0, left = +l.left || 0, right = +l.right || 0
   if (l.kind === 'sleeper')      return rows * (left + right) * 2          // all LB+UB
-  if (l.kind === 'semi_sleeper') return rows * left * 2 + rows * right * 2 // left=LB+UB, right=Seater+UB
+  if (l.kind === 'semi_sleeper') return rows * (left + right) * 2          // LB+Seater lower + UB upper both sides
   return rows * (left + right)
 }
 
@@ -137,27 +137,43 @@ function LayoutPreview({ lay }) {
   }
 
   if (lay.kind === 'semi_sleeper') {
-    // per row: left LB, right Seater, all UB
-    // build manually to keep numbering correct
+    // Number seats per row: left LB cols → right Seater cols → all UB cols
     n = 0
-    const lbAll = [], seaterAll = [], ubAll = []
+    const lbAll = [], seaterAll = [], ubLeftAll = [], ubRightAll = []
     for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < left;         c++) lbAll.push(mkSeat('lb'))
-      for (let c = 0; c < right;        c++) seaterAll.push(mkSeat('seater'))
-      for (let c = 0; c < left + right; c++) ubAll.push(mkSeat('ub'))
+      for (let c = 0; c < left;  c++) lbAll.push(mkSeat('lb'))
+      for (let c = 0; c < right; c++) seaterAll.push(mkSeat('seater'))
+      for (let c = 0; c < left;  c++) ubLeftAll.push(mkSeat('ub'))
+      for (let c = 0; c < right; c++) ubRightAll.push(mkSeat('ub'))
     }
-    const lbCols     = Array.from({ length: left },         (_, c) => lbAll.filter((_, i) => i % left === c))
-    const seaterCols  = Array.from({ length: right },        (_, c) => seaterAll.filter((_, i) => i % right === c))
-    const ubCols      = Array.from({ length: left + right }, (_, c) => ubAll.filter((_, i) => i % (left + right) === c))
+    const lbCols      = Array.from({ length: left },  (_, c) => lbAll.filter((_, i) => i % left === c))
+    const seaterCols  = Array.from({ length: right }, (_, c) => seaterAll.filter((_, i) => i % right === c))
+    const ubLeftCols  = Array.from({ length: left },  (_, c) => ubLeftAll.filter((_, i) => i % left === c))
+    const ubRightCols = Array.from({ length: right }, (_, c) => ubRightAll.filter((_, i) => i % right === c))
+
+    const SideBox = ({ title, lowerCols, upperCols }) => (
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] font-bold text-slate-600 mb-1">{title}</div>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-2 space-y-2">
+          <div>
+            <div className="text-[9px] text-slate-400 mb-1">Lower</div>
+            <div className="flex gap-1">{lowerCols.map((col, ci) => <div key={ci} className="flex flex-col gap-1 flex-1 min-w-[36px]">{col}</div>)}</div>
+          </div>
+          <div className="border-t border-dashed border-slate-300" />
+          <div>
+            <div className="text-[9px] text-slate-400 mb-1">Upper</div>
+            <div className="flex gap-1">{upperCols.map((col, ci) => <div key={ci} className="flex flex-col gap-1 flex-1 min-w-[36px]">{col}</div>)}</div>
+          </div>
+        </div>
+      </div>
+    )
+
     return (
       <div>{legend}
         <div className="flex gap-3 overflow-x-auto">
-          <DeckBox title="Lower deck">
-            <ColGroup cols={lbCols} /><AisleDivider /><ColGroup cols={seaterCols} />
-          </DeckBox>
-          <DeckBox title="Upper deck">
-            <ColGroup cols={ubCols.slice(0, left)} /><AisleDivider /><ColGroup cols={ubCols.slice(left)} />
-          </DeckBox>
+          <SideBox title="Left row (LB + UB)" lowerCols={lbCols} upperCols={ubLeftCols} />
+          <AisleDivider />
+          <SideBox title="Right row (Seater + UB)" lowerCols={seaterCols} upperCols={ubRightCols} />
         </div>
       </div>
     )
