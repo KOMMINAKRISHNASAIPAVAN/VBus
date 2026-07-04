@@ -4,8 +4,8 @@ import { Phone, X, Plus, Bot } from 'lucide-react'
 import AssistantWidget from './AssistantWidget'
 import WhatsAppIcon from './WhatsAppIcon'
 
-const PHONE = '+919391225511'
-const WHATSAPP = 'https://wa.me/919391225511'
+const PHONE = '+918520998910'
+const WHATSAPP = 'https://wa.me/918520998910'
 
 export default function ContactFab() {
   const [open, setOpen] = useState(false)
