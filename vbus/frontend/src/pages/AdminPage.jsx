@@ -38,110 +38,126 @@ const totalOf = (l) => {
   return rows * (left + right)
 }
 
-// ── Admin seat preview cell (RedBus style) ───────────────────────────────────
+// ── Admin layout preview (column-oriented, matches user SeatMap) ────────────
 function PreviewSeat({ num, type, isBlocked, isLady }) {
-  const isSleeper = type === 'lb' || type === 'ub'
-  const border = isBlocked ? 'border-slate-300 bg-slate-100'
-               : isLady    ? 'border-pink-400 bg-pink-50'
-               : type === 'lb' ? 'border-green-500 bg-white'
-               : type === 'ub' ? 'border-amber-400 bg-white'
-               : 'border-green-400 bg-white'
-  const text = isBlocked ? 'text-slate-400' : isLady ? 'text-pink-500'
-             : type === 'ub' ? 'text-amber-600' : 'text-green-700'
+  const color = isBlocked ? { box: 'border-slate-300 bg-slate-100', pill: 'bg-slate-200', text: 'text-slate-400' }
+              : isLady    ? { box: 'border-pink-400 bg-pink-50',    pill: 'bg-pink-200',  text: 'text-pink-600' }
+              : type === 'lb'     ? { box: 'border-green-500 bg-white', pill: 'bg-green-100', text: 'text-green-700' }
+              : type === 'ub'     ? { box: 'border-amber-400 bg-white', pill: 'bg-amber-100', text: 'text-amber-700' }
+              : { box: 'border-green-400 bg-white', pill: 'bg-green-100', text: 'text-slate-700' }
+
+  if (type === 'lb' || type === 'ub') {
+    return (
+      <div className={`w-full h-8 rounded-lg border-2 ${color.box} flex items-center justify-between px-1.5`}>
+        <div className={`w-1.5 h-5 rounded ${color.pill} flex-shrink-0`} />
+        <span className={`text-[9px] font-bold ${color.text}`}>{num}</span>
+        <span className={`text-[8px] ${color.text} opacity-70`}>{type.toUpperCase()}</span>
+      </div>
+    )
+  }
+  // seater
   return (
-    <div className={`flex flex-col items-center gap-0.5`}>
-      {isSleeper ? (
-        <div className={`w-8 h-12 rounded-xl border-2 ${border} flex flex-col items-center justify-end pb-1 relative`}>
-          <div className={`absolute top-1.5 left-1 right-1 h-1 rounded-full ${isBlocked ? 'bg-slate-200' : isLady ? 'bg-pink-200' : 'bg-green-100'}`} />
-          <span className={`text-[8px] font-bold ${text}`}>{num}</span>
-        </div>
-      ) : (
-        <div className={`w-8 h-9 rounded-t-xl border-2 ${border} flex flex-col items-end justify-end relative`}>
-          <div className="absolute -top-1 left-1 right-1 flex gap-0.5">
-            <div className={`flex-1 h-1.5 rounded-full ${isBlocked ? 'bg-slate-200' : isLady ? 'bg-pink-200' : 'bg-green-100'}`} />
-            <div className={`flex-1 h-1.5 rounded-full ${isBlocked ? 'bg-slate-200' : isLady ? 'bg-pink-200' : 'bg-green-100'}`} />
-          </div>
-          <div className={`w-full h-2 rounded-b-md ${isBlocked ? 'bg-slate-200' : isLady ? 'bg-pink-100' : 'bg-green-50'}`} />
-          <span className={`absolute inset-0 flex items-center justify-center text-[8px] font-bold ${text}`}>{num}</span>
-        </div>
-      )}
-      <span className={`text-[8px] ${text}`}>{type.toUpperCase()}</span>
+    <div className={`w-full h-9 rounded-t-lg border-2 ${color.box} relative flex flex-col justify-end`}>
+      <div className="absolute -top-1 left-1 right-1 flex gap-0.5">
+        <div className={`flex-1 h-1.5 rounded-full ${color.pill}`} />
+        <div className={`flex-1 h-1.5 rounded-full ${color.pill}`} />
+      </div>
+      <div className={`w-full h-2 rounded-b ${color.pill} opacity-60`} />
+      <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold ${color.text}`}>{num}</span>
     </div>
   )
 }
 
 function LayoutPreview({ lay }) {
   const left = +lay.left || 0, right = +lay.right || 0, rows = +lay.rows || 0
-  const blocked = new Set((lay.blocked || []).map(String))
+  const blocked  = new Set((lay.blocked || []).map(String))
   const ladiesCount = +lay.ladies || 0
   const total = totalOf(lay)
   const ladiesSet = new Set()
   for (let i = 1; i <= Math.min(ladiesCount, total); i++) ladiesSet.add(String(i))
-  let n = 0
-  const cell = (type) => { n += 1; return <PreviewSeat key={n} num={n} type={type} isBlocked={blocked.has(String(n))} isLady={ladiesSet.has(String(n))} /> }
 
-  // Legend
+  let n = 0
+  const mkSeat = (type) => {
+    n += 1
+    return <PreviewSeat key={n} num={n} type={type} isBlocked={blocked.has(String(n))} isLady={ladiesSet.has(String(n))} />
+  }
+
   const legend = (
-    <div className="flex flex-wrap gap-3 text-[10px] mb-2">
-      {lay.kind !== 'sleeper' && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border-2 border-green-400 bg-white inline-block" /> Seater</span>}
-      {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-4 rounded border-2 border-green-500 bg-white inline-block" /> LB</span>}
-      {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-4 rounded border-2 border-amber-400 bg-white inline-block" /> UB</span>}
-      {ladiesCount > 0        && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border-2 border-pink-400 bg-pink-50 inline-block" /> Ladies</span>}
-      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border-2 border-slate-300 bg-slate-100 inline-block" /> Blocked</span>
+    <div className="flex flex-wrap gap-3 text-[10px] mb-3">
+      {lay.kind !== 'sleeper' && <span className="flex items-center gap-1"><span className="w-5 h-3 rounded border-2 border-green-400 bg-white inline-block" /> Seater</span>}
+      {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-5 h-3 rounded border-2 border-green-500 bg-white inline-block" /> LB</span>}
+      {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-5 h-3 rounded border-2 border-amber-400 bg-white inline-block" /> UB</span>}
+      {ladiesCount > 0        && <span className="flex items-center gap-1"><span className="w-5 h-3 rounded border-2 border-pink-400 bg-pink-50 inline-block" /> Ladies</span>}
+      <span className="flex items-center gap-1"><span className="w-5 h-3 rounded border-2 border-slate-300 bg-slate-100 inline-block" /> Blocked</span>
     </div>
   )
 
-  if (lay.kind === 'seater') return (
-    <div>{legend}
-      <div className="flex gap-4">
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-          {Array.from({ length: rows }).map((_, r) => (
-            <div key={r} className="flex items-end gap-1">
-              {Array.from({ length: left }).map(() => cell('seater'))}
-              {right > 0 && <div className="w-3" />}
-              {Array.from({ length: right }).map(() => cell('seater'))}
-            </div>
-          ))}
-        </div>
+  // build column arrays for a given type and col count
+  const buildCols = (type, colCount) => {
+    const all = Array.from({ length: rows * colCount }, () => mkSeat(type))
+    return Array.from({ length: colCount }, (_, c) =>
+      all.filter((_, i) => i % colCount === c)
+    )
+  }
+
+  const DeckBox = ({ title, children }) => (
+    <div>
+      <div className="text-[10px] font-bold text-slate-600 mb-1">{title}</div>
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-2">
+        <div className="flex gap-1.5 items-start">{children}</div>
       </div>
     </div>
   )
 
+  const ColGroup = ({ cols }) => cols.map((col, ci) => (
+    <div key={ci} className="flex flex-col gap-1 flex-1 min-w-[36px]">{col}</div>
+  ))
+
+  const AisleDivider = () => <div className="self-stretch w-px bg-slate-300 mx-0.5" />
+
+  if (lay.kind === 'seater') {
+    n = 0
+    const cols = buildCols('seater', left + right)
+    return (<div>{legend}<DeckBox title="Seats"><ColGroup cols={cols.slice(0, left)} /><AisleDivider /><ColGroup cols={cols.slice(left)} /></DeckBox></div>)
+  }
+
   if (lay.kind === 'sleeper') {
-    // Lower deck = LB, Upper deck = UB
-    const lbCells = [], ubCells = []
-    for (let r = 0; r < rows; r++) {
-      const lbRow = [], ubRow = []
-      for (let c = 0; c < left + right; c++) lbRow.push(cell('lb'))
-      for (let c = 0; c < left + right; c++) ubRow.push(cell('ub'))
-      lbCells.push(<div key={r} className="flex items-end gap-1">{lbRow.slice(0, left)}{right > 0 && <div className="w-3" />}{lbRow.slice(left)}</div>)
-      ubCells.push(<div key={r} className="flex items-end gap-1">{ubRow.slice(0, left)}{right > 0 && <div className="w-3" />}{ubRow.slice(left)}</div>)
-    }
+    n = 0
+    // LB seats first (rows * cols), then UB seats
+    const lbCols = buildCols('lb', left + right)
+    const ubCols = buildCols('ub', left + right)
     return (
       <div>{legend}
-        <div className="flex gap-4 overflow-x-auto">
-          <div><div className="text-[10px] font-bold text-slate-600 mb-1">Lower deck</div><div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">{lbCells}</div></div>
-          <div><div className="text-[10px] font-bold text-slate-600 mb-1">Upper deck</div><div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">{ubCells}</div></div>
+        <div className="flex gap-3 overflow-x-auto">
+          <DeckBox title="Lower deck"><ColGroup cols={lbCols.slice(0, left)} /><AisleDivider /><ColGroup cols={lbCols.slice(left)} /></DeckBox>
+          <DeckBox title="Upper deck"><ColGroup cols={ubCols.slice(0, left)} /><AisleDivider /><ColGroup cols={ubCols.slice(left)} /></DeckBox>
         </div>
       </div>
     )
   }
 
   if (lay.kind === 'semi_sleeper') {
-    // Lower deck: left=LB, right=Seater | Upper deck: all UB
-    const lowerRows = [], upperRows = []
+    // per row: left LB, right Seater, all UB
+    // build manually to keep numbering correct
+    n = 0
+    const lbAll = [], seaterAll = [], ubAll = []
     for (let r = 0; r < rows; r++) {
-      const lb = Array.from({ length: left }).map(() => cell('lb'))
-      const st = Array.from({ length: right }).map(() => cell('seater'))
-      const ub = Array.from({ length: left + right }).map(() => cell('ub'))
-      lowerRows.push(<div key={r} className="flex items-end gap-1">{lb}<div className="w-3" />{st}</div>)
-      upperRows.push(<div key={r} className="flex items-end gap-1">{ub.slice(0, left)}<div className="w-3" />{ub.slice(left)}</div>)
+      for (let c = 0; c < left;         c++) lbAll.push(mkSeat('lb'))
+      for (let c = 0; c < right;        c++) seaterAll.push(mkSeat('seater'))
+      for (let c = 0; c < left + right; c++) ubAll.push(mkSeat('ub'))
     }
+    const lbCols     = Array.from({ length: left },         (_, c) => lbAll.filter((_, i) => i % left === c))
+    const seaterCols  = Array.from({ length: right },        (_, c) => seaterAll.filter((_, i) => i % right === c))
+    const ubCols      = Array.from({ length: left + right }, (_, c) => ubAll.filter((_, i) => i % (left + right) === c))
     return (
       <div>{legend}
-        <div className="flex gap-4 overflow-x-auto">
-          <div><div className="text-[10px] font-bold text-slate-600 mb-1">Lower deck</div><div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">{lowerRows}</div></div>
-          <div><div className="text-[10px] font-bold text-slate-600 mb-1">Upper deck</div><div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">{upperRows}</div></div>
+        <div className="flex gap-3 overflow-x-auto">
+          <DeckBox title="Lower deck">
+            <ColGroup cols={lbCols} /><AisleDivider /><ColGroup cols={seaterCols} />
+          </DeckBox>
+          <DeckBox title="Upper deck">
+            <ColGroup cols={ubCols.slice(0, left)} /><AisleDivider /><ColGroup cols={ubCols.slice(left)} />
+          </DeckBox>
         </div>
       </div>
     )
