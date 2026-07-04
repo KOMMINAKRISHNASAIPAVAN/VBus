@@ -11,55 +11,107 @@ router = APIRouter()
 
 
 def _build_seats_for_trip(trip_id: int, bus, base_price: float):
-    """Create TripSeat rows from a bus's layout config.
-
-    layout = {decks:1|2, rows:int, left:int, right:int, kind:'seater'|'sleeper', ladies:int}
-    Falls back to a 2+2 seater / sleeper split derived from total_seats.
-    """
     layout = bus.layout or {}
-    kind = layout.get("kind") or ("sleeper" if bus.bus_type in ("sleeper", "semi_sleeper") else "seater")
-    left = int(layout.get("left") or 2)
-    right = int(layout.get("right") or 2)
-    decks = int(layout.get("decks") or (2 if kind == "sleeper" else 1))
-    per_row = max(1, left + right)
-    total = bus.total_seats or (per_row * 10 * decks)
-    rows = int(layout.get("rows") or -(-total // (per_row * decks)))  # ceil
-    ladies = int(layout.get("ladies") if layout.get("ladies") is not None else max(2, total // 8))
-    fares = layout.get("fares") or {}                                  # {seater/lower/upper: price}
-    blocked = {str(x).strip() for x in (layout.get("blocked") or [])}  # seat numbers to block
+    kind   = layout.get("kind") or ("sleeper" if bus.bus_type in ("sleeper", "semi_sleeper") else "seater")
+    left   = int(layout.get("left") or 2)
+    right  = int(layout.get("right") or 2)
+    rows   = int(layout.get("rows") or 10)
+    ladies = int(layout.get("ladies") or 0)
+    fares  = layout.get("fares") or {}
+    blocked = {str(x).strip() for x in (layout.get("blocked") or [])}
 
-    def fare_for(deck):
-        category = "seater" if kind == "seater" else deck   # 'lower' / 'upper'
-        val = fares.get(category)
-        if val not in (None, "", 0, "0"):
-            try:
-                return float(val)
-            except (TypeError, ValueError):
-                pass
-        return base_price + (150 if (kind == "sleeper" and deck == "lower") else 0)
+    def fare(key, fallback):
+        v = fares.get(key)
+        if v not in (None, "", 0, "0"):
+            try: return float(v)
+            except: pass
+        return fallback
 
-    deck_names = ["lower"] if decks == 1 else ["lower", "upper"]
     seats, n = [], 0
-    for deck in deck_names:
-        price = fare_for(deck)
+
+    if kind == "seater":
+        # All seats are seater, single deck
+        price = fare("seater", base_price)
         for _r in range(rows):
-            for _c in range(per_row):
+            for _c in range(left + right):
                 n += 1
                 seats.append(TripSeat(
-                    trip_id=trip_id,
-                    seat_number=str(n),
-                    seat_type=kind,
-                    deck=deck,
-                    price=price,
+                    trip_id=trip_id, seat_number=str(n),
+                    seat_type="seater", deck="lower", price=price,
                     status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
                 ))
-    # reserve some available seats for women (spread across the bus)
+
+    elif kind == "sleeper":
+        # All columns: LB (lower) + UB (upper) per row
+        lb_price = fare("lower", base_price)
+        ub_price = fare("upper", base_price + 100)
+        for _r in range(rows):
+            for _c in range(left + right):
+                n += 1
+                seats.append(TripSeat(
+                    trip_id=trip_id, seat_number=str(n),
+                    seat_type="lower", deck="lower", price=lb_price,
+                    status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
+                ))
+            for _c in range(left + right):
+                n += 1
+                seats.append(TripSeat(
+                    trip_id=trip_id, seat_number=str(n),
+                    seat_type="upper", deck="upper", price=ub_price,
+                    status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
+                ))
+
+    elif kind == "semi_sleeper":
+        # Left cols: LB (lower) + UB (upper) per row
+        # Right cols: Seater (lower) + UB (upper) per row
+        lb_price     = fare("lower",  base_price + 50)
+        ub_price     = fare("upper",  base_price + 100)
+        seater_price = fare("seater", base_price)
+        for _r in range(rows):
+            # LB row — left cols only
+            for _c in range(left):
+                n += 1
+                seats.append(TripSeat(
+                    trip_id=trip_id, seat_number=str(n),
+                    seat_type="lower", deck="lower", price=lb_price,
+                    status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
+                ))
+            # Seater row — right cols only
+            for _c in range(right):
+                n += 1
+                seats.append(TripSeat(
+                    trip_id=trip_id, seat_number=str(n),
+                    seat_type="seater", deck="lower", price=seater_price,
+                    status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
+                ))
+            # UB row — all cols (left + right)
+            for _c in range(left + right):
+                n += 1
+                seats.append(TripSeat(
+                    trip_id=trip_id, seat_number=str(n),
+                    seat_type="upper", deck="upper", price=ub_price,
+                    status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
+                ))
+
+    else:
+        # fallback: plain seater
+        price = fare("seater", base_price)
+        for _r in range(rows):
+            for _c in range(left + right):
+                n += 1
+                seats.append(TripSeat(
+                    trip_id=trip_id, seat_number=str(n),
+                    seat_type="seater", deck="lower", price=price,
+                    status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
+                ))
+
+    # Mark ladies seats (first N available seats)
     if ladies > 0:
         avail = [s for s in seats if s.status == SeatStatus.available]
-        step = max(1, len(avail) // ladies)
-        for s in avail[::step]:
+        for s in avail[:ladies]:
             s.status = SeatStatus.ladies
             s.gender_lock = "female"
+
     return seats
 
 @router.get("/", response_model=List[SearchResult])
