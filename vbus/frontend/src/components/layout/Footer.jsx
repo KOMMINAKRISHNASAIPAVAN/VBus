@@ -124,12 +124,12 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="tel:+919391225511" className="flex items-center gap-2 hover:text-white transition-colors">
-                  <Phone className="w-4 h-4 text-vbus-400 shrink-0" /> +91 93912 25511
+                <a href="tel:+918520998910" className="flex items-center gap-2 hover:text-white transition-colors">
+                  <Phone className="w-4 h-4 text-vbus-400 shrink-0" /> +91 85209 98910
                 </a>
               </li>
               <li>
-                <a href="https://wa.me/919391225511" target="_blank" rel="noopener noreferrer"
+                <a href="https://wa.me/918520998910" target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2 hover:text-white transition-colors">
                   <WhatsAppIcon className="w-4 h-4 text-[#25D366] shrink-0" /> Chat on WhatsApp
                 </a>
