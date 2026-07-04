@@ -38,122 +38,115 @@ const totalOf = (l) => {
   return rows * (left + right)
 }
 
-// colour per seat type
-const SEAT_COLORS = {
-  seater:  { bg: 'bg-blue-50',   border: 'border-blue-300',   text: 'text-blue-700' },
-  lb:      { bg: 'bg-green-50',  border: 'border-green-400',  text: 'text-green-700' },
-  ub:      { bg: 'bg-amber-50',  border: 'border-amber-400',  text: 'text-amber-700' },
-  blocked: { bg: 'bg-slate-200', border: 'border-slate-300',  text: 'text-slate-400' },
-  ladies:  { bg: 'bg-pink-50',   border: 'border-pink-300',   text: 'text-pink-600' },
-}
-
-function SeatCell({ num, type, blocked, ladies }) {
-  const t = blocked ? 'blocked' : ladies ? 'ladies' : type
-  const c = SEAT_COLORS[t] || SEAT_COLORS.seater
-  const isSlp = type === 'lb' || type === 'ub'
+// ── Admin seat preview cell (RedBus style) ───────────────────────────────────
+function PreviewSeat({ num, type, isBlocked, isLady }) {
+  const isSleeper = type === 'lb' || type === 'ub'
+  const border = isBlocked ? 'border-slate-300 bg-slate-100'
+               : isLady    ? 'border-pink-400 bg-pink-50'
+               : type === 'lb' ? 'border-green-500 bg-white'
+               : type === 'ub' ? 'border-amber-400 bg-white'
+               : 'border-green-400 bg-white'
+  const text = isBlocked ? 'text-slate-400' : isLady ? 'text-pink-500'
+             : type === 'ub' ? 'text-amber-600' : 'text-green-700'
   return (
-    <div title={`${num} (${t})`}
-      className={`${isSlp ? 'w-6 h-9' : 'w-7 h-7'} rounded border text-[8px] font-bold flex flex-col items-center justify-center ${c.bg} ${c.border} ${c.text}`}>
-      <span>{num}</span>
-      {isSlp && <span className="text-[7px] opacity-70">{type.toUpperCase()}</span>}
+    <div className={`flex flex-col items-center gap-0.5`}>
+      {isSleeper ? (
+        <div className={`w-8 h-12 rounded-xl border-2 ${border} flex flex-col items-center justify-end pb-1 relative`}>
+          <div className={`absolute top-1.5 left-1 right-1 h-1 rounded-full ${isBlocked ? 'bg-slate-200' : isLady ? 'bg-pink-200' : 'bg-green-100'}`} />
+          <span className={`text-[8px] font-bold ${text}`}>{num}</span>
+        </div>
+      ) : (
+        <div className={`w-8 h-9 rounded-t-xl border-2 ${border} flex flex-col items-end justify-end relative`}>
+          <div className="absolute -top-1 left-1 right-1 flex gap-0.5">
+            <div className={`flex-1 h-1.5 rounded-full ${isBlocked ? 'bg-slate-200' : isLady ? 'bg-pink-200' : 'bg-green-100'}`} />
+            <div className={`flex-1 h-1.5 rounded-full ${isBlocked ? 'bg-slate-200' : isLady ? 'bg-pink-200' : 'bg-green-100'}`} />
+          </div>
+          <div className={`w-full h-2 rounded-b-md ${isBlocked ? 'bg-slate-200' : isLady ? 'bg-pink-100' : 'bg-green-50'}`} />
+          <span className={`absolute inset-0 flex items-center justify-center text-[8px] font-bold ${text}`}>{num}</span>
+        </div>
+      )}
+      <span className={`text-[8px] ${text}`}>{type.toUpperCase()}</span>
     </div>
   )
 }
 
 function LayoutPreview({ lay }) {
-  const left = +lay.left || 0, right = +lay.right || 0
-  const rows = +lay.rows || 0
+  const left = +lay.left || 0, right = +lay.right || 0, rows = +lay.rows || 0
   const blocked = new Set((lay.blocked || []).map(String))
   const ladiesCount = +lay.ladies || 0
-  let n = 0
-  const ladiesSet = new Set()
-
-  // pre-count ladies seats
   const total = totalOf(lay)
+  const ladiesSet = new Set()
   for (let i = 1; i <= Math.min(ladiesCount, total); i++) ladiesSet.add(String(i))
+  let n = 0
+  const cell = (type) => { n += 1; return <PreviewSeat key={n} num={n} type={type} isBlocked={blocked.has(String(n))} isLady={ladiesSet.has(String(n))} /> }
 
-  const cell = (type) => {
-    n += 1
-    return <SeatCell key={n} num={n} type={type} blocked={blocked.has(String(n))} ladies={ladiesSet.has(String(n))} />
-  }
+  // Legend
+  const legend = (
+    <div className="flex flex-wrap gap-3 text-[10px] mb-2">
+      {lay.kind !== 'sleeper' && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border-2 border-green-400 bg-white inline-block" /> Seater</span>}
+      {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-4 rounded border-2 border-green-500 bg-white inline-block" /> LB</span>}
+      {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-4 rounded border-2 border-amber-400 bg-white inline-block" /> UB</span>}
+      {ladiesCount > 0        && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border-2 border-pink-400 bg-pink-50 inline-block" /> Ladies</span>}
+      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border-2 border-slate-300 bg-slate-100 inline-block" /> Blocked</span>
+    </div>
+  )
 
-  return (
-    <div className="space-y-3">
-      {/* Legend */}
-      <div className="flex flex-wrap gap-2 text-[10px]">
-        {lay.kind !== 'sleeper' && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-blue-300 bg-blue-50 inline-block" /> Seater</span>}
-        {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-green-400 bg-green-50 inline-block" /> LB</span>}
-        {lay.kind !== 'seater'  && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-amber-400 bg-amber-50 inline-block" /> UB</span>}
-        {ladiesCount > 0        && <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-pink-300 bg-pink-50 inline-block" /> Ladies</span>}
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded border border-slate-300 bg-slate-200 inline-block" /> Blocked</span>
-      </div>
-
-      {/* Seater only */}
-      {lay.kind === 'seater' && (
-        <div className="space-y-1">
+  if (lay.kind === 'seater') return (
+    <div>{legend}
+      <div className="flex gap-4">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
           {Array.from({ length: rows }).map((_, r) => (
-            <div key={r} className="flex items-center gap-1">
+            <div key={r} className="flex items-end gap-1">
               {Array.from({ length: left }).map(() => cell('seater'))}
               {right > 0 && <div className="w-3" />}
               {Array.from({ length: right }).map(() => cell('seater'))}
             </div>
           ))}
         </div>
-      )}
-
-      {/* Sleeper only: left=LB+UB, right=LB+UB */}
-      {lay.kind === 'sleeper' && (
-        <div className="space-y-2">
-          {Array.from({ length: rows }).map((_, r) => (
-            <div key={r} className="space-y-0.5">
-              <div className="flex items-center gap-1">
-                <span className="text-[8px] text-slate-400 w-4">LB</span>
-                {Array.from({ length: left }).map(() => cell('lb'))}
-                {right > 0 && <div className="w-3" />}
-                {Array.from({ length: right }).map(() => cell('lb'))}
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[8px] text-slate-400 w-4">UB</span>
-                {Array.from({ length: left }).map(() => cell('ub'))}
-                {right > 0 && <div className="w-3" />}
-                {Array.from({ length: right }).map(() => cell('ub'))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Semi-sleeper: left=LB+UB, right=Seater+UB */}
-      {lay.kind === 'semi_sleeper' && (
-        <div className="space-y-2">
-          <div className="flex gap-6 text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-1">
-            <span style={{ minWidth: left * 28 }}>← Left (LB+UB)</span>
-            <span>Right (Seater+UB) →</span>
-          </div>
-          {Array.from({ length: rows }).map((_, r) => (
-            <div key={r} className="space-y-0.5">
-              {/* top row: left=LB, right=Seater */}
-              <div className="flex items-center gap-1">
-                <span className="text-[8px] text-slate-400 w-4">LB</span>
-                {Array.from({ length: left }).map(() => cell('lb'))}
-                {right > 0 && <div className="w-3" />}
-                <span className="text-[8px] text-slate-400 w-6">Seat</span>
-                {Array.from({ length: right }).map(() => cell('seater'))}
-              </div>
-              {/* bottom row: left=UB, right=UB */}
-              <div className="flex items-center gap-1">
-                <span className="text-[8px] text-slate-400 w-4">UB</span>
-                {Array.from({ length: left }).map(() => cell('ub'))}
-                {right > 0 && <div className="w-3" />}
-                <span className="text-[8px] text-slate-400 w-6">UB</span>
-                {Array.from({ length: right }).map(() => cell('ub'))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   )
+
+  if (lay.kind === 'sleeper') {
+    // Lower deck = LB, Upper deck = UB
+    const lbCells = [], ubCells = []
+    for (let r = 0; r < rows; r++) {
+      const lbRow = [], ubRow = []
+      for (let c = 0; c < left + right; c++) lbRow.push(cell('lb'))
+      for (let c = 0; c < left + right; c++) ubRow.push(cell('ub'))
+      lbCells.push(<div key={r} className="flex items-end gap-1">{lbRow.slice(0, left)}{right > 0 && <div className="w-3" />}{lbRow.slice(left)}</div>)
+      ubCells.push(<div key={r} className="flex items-end gap-1">{ubRow.slice(0, left)}{right > 0 && <div className="w-3" />}{ubRow.slice(left)}</div>)
+    }
+    return (
+      <div>{legend}
+        <div className="flex gap-4 overflow-x-auto">
+          <div><div className="text-[10px] font-bold text-slate-600 mb-1">Lower deck</div><div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">{lbCells}</div></div>
+          <div><div className="text-[10px] font-bold text-slate-600 mb-1">Upper deck</div><div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">{ubCells}</div></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (lay.kind === 'semi_sleeper') {
+    // Lower deck: left=LB, right=Seater | Upper deck: all UB
+    const lowerRows = [], upperRows = []
+    for (let r = 0; r < rows; r++) {
+      const lb = Array.from({ length: left }).map(() => cell('lb'))
+      const st = Array.from({ length: right }).map(() => cell('seater'))
+      const ub = Array.from({ length: left + right }).map(() => cell('ub'))
+      lowerRows.push(<div key={r} className="flex items-end gap-1">{lb}<div className="w-3" />{st}</div>)
+      upperRows.push(<div key={r} className="flex items-end gap-1">{ub.slice(0, left)}<div className="w-3" />{ub.slice(left)}</div>)
+    }
+    return (
+      <div>{legend}
+        <div className="flex gap-4 overflow-x-auto">
+          <div><div className="text-[10px] font-bold text-slate-600 mb-1">Lower deck</div><div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">{lowerRows}</div></div>
+          <div><div className="text-[10px] font-bold text-slate-600 mb-1">Upper deck</div><div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">{upperRows}</div></div>
+        </div>
+      </div>
+    )
+  }
+  return null
 }
 
 function LayoutEditor({ lay, set }) {
