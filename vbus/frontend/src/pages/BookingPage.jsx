@@ -332,15 +332,6 @@ export default function BookingPage() {
                     <button onClick={applyCoupon} className="btn-primary px-5 shrink-0">Apply</button>
                   </div>
                   {couponError && <p className="text-xs text-red-500 mt-1.5">{couponError}</p>}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {Object.entries(COUPONS).map(([code, c]) => (
-                      <button key={code} type="button"
-                        onClick={() => { setCouponInput(code); setCouponError('') }}
-                        className="text-xs px-3 py-1.5 rounded-full border border-vbus-200 bg-vbus-50 text-vbus-700 hover:bg-vbus-100 font-mono font-semibold transition-colors">
-                        {code}
-                      </button>
-                    ))}
-                  </div>
                 </>
               )}
             </div>
