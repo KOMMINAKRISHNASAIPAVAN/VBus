@@ -49,28 +49,31 @@ const totalOf = (l) => {
 function PreviewSeat({ num, type, isBlocked, isLady }) {
   const color = isBlocked ? { box: 'border-slate-300 bg-slate-100', pill: 'bg-slate-200', text: 'text-slate-400' }
               : isLady    ? { box: 'border-pink-400 bg-pink-50',    pill: 'bg-pink-200',  text: 'text-pink-600' }
-              : type === 'lb'     ? { box: 'border-green-500 bg-white', pill: 'bg-green-100', text: 'text-green-700' }
-              : type === 'ub'     ? { box: 'border-amber-400 bg-white', pill: 'bg-amber-100', text: 'text-amber-700' }
-              : { box: 'border-green-400 bg-white', pill: 'bg-green-100', text: 'text-slate-700' }
+              : type === 'lb'     ? { box: 'border-green-500 bg-white', pill: 'bg-green-200', text: 'text-green-700' }
+              : type === 'ub'     ? { box: 'border-amber-400 bg-white', pill: 'bg-amber-200', text: 'text-amber-700' }
+              : { box: 'border-blue-400 bg-white', pill: 'bg-blue-100', text: 'text-blue-700' }
 
   if (type === 'lb' || type === 'ub') {
+    // horizontal berth — pillow on left, number + type label
     return (
-      <div className={`w-full h-8 rounded-lg border-2 ${color.box} flex items-center justify-between px-1.5`}>
-        <div className={`w-1.5 h-5 rounded ${color.pill} flex-shrink-0`} />
-        <span className={`text-[9px] font-bold ${color.text}`}>{num}</span>
-        <span className={`text-[8px] ${color.text} opacity-70`}>{type.toUpperCase()}</span>
+      <div className={`w-full h-11 rounded-lg border-2 ${color.box} flex items-center gap-1.5 px-1.5`}>
+        <div className={`w-2 h-7 rounded ${color.pill} flex-shrink-0`} />
+        <div className="flex flex-col flex-1 min-w-0">
+          <span className={`text-[10px] font-bold ${color.text} leading-tight`}>{num}</span>
+          <span className={`text-[8px] ${color.text} opacity-70 uppercase`}>{type}</span>
+        </div>
       </div>
     )
   }
-  // seater
+  // seater — chair shape
   return (
-    <div className={`w-full h-9 rounded-t-lg border-2 ${color.box} relative flex flex-col justify-end`}>
-      <div className="absolute -top-1 left-1 right-1 flex gap-0.5">
-        <div className={`flex-1 h-1.5 rounded-full ${color.pill}`} />
-        <div className={`flex-1 h-1.5 rounded-full ${color.pill}`} />
+    <div className={`w-full h-11 rounded-t-lg border-2 ${color.box} relative flex flex-col justify-end`}>
+      <div className="absolute -top-1.5 left-1.5 right-1.5 flex gap-0.5">
+        <div className={`flex-1 h-2 rounded-full ${color.pill}`} />
+        <div className={`flex-1 h-2 rounded-full ${color.pill}`} />
       </div>
-      <div className={`w-full h-2 rounded-b ${color.pill} opacity-60`} />
-      <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold ${color.text}`}>{num}</span>
+      <div className={`w-full h-2.5 rounded-b ${color.pill} opacity-70`} />
+      <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${color.text}`}>{num}</span>
     </div>
   )
 }
@@ -116,8 +119,8 @@ function LayoutPreview({ lay }) {
     </div>
   )
 
-  const ColGroup = ({ cols }) => cols.map((col, ci) => (
-    <div key={ci} className="flex flex-col gap-1 flex-1 min-w-[36px]">{col}</div>
+  const ColGroup = ({ cols, w = 'w-14' }) => cols.map((col, ci) => (
+    <div key={ci} className={`flex flex-col gap-1 ${w} flex-shrink-0`}>{col}</div>
   ))
 
   const AisleDivider = () => <div className="self-stretch w-px bg-slate-300 mx-0.5" />
@@ -125,19 +128,18 @@ function LayoutPreview({ lay }) {
   if (lay.kind === 'seater') {
     n = 0
     const cols = buildCols('seater', left + right)
-    return (<div>{legend}<DeckBox title="Seats"><ColGroup cols={cols.slice(0, left)} /><AisleDivider /><ColGroup cols={cols.slice(left)} /></DeckBox></div>)
+    return (<div>{legend}<DeckBox title="Seats"><ColGroup cols={cols.slice(0, left)} w="w-14" /><AisleDivider /><ColGroup cols={cols.slice(left)} w="w-14" /></DeckBox></div>)
   }
 
   if (lay.kind === 'sleeper') {
     n = 0
-    // LB seats first (rows * cols), then UB seats
     const lbCols = buildCols('lb', left + right)
     const ubCols = buildCols('ub', left + right)
     return (
       <div>{legend}
         <div className="flex gap-3 overflow-x-auto">
-          <DeckBox title="Lower deck"><ColGroup cols={lbCols.slice(0, left)} /><AisleDivider /><ColGroup cols={lbCols.slice(left)} /></DeckBox>
-          <DeckBox title="Upper deck"><ColGroup cols={ubCols.slice(0, left)} /><AisleDivider /><ColGroup cols={ubCols.slice(left)} /></DeckBox>
+          <DeckBox title="Lower deck"><ColGroup cols={lbCols.slice(0, left)} w="w-16" /><AisleDivider /><ColGroup cols={lbCols.slice(left)} w="w-16" /></DeckBox>
+          <DeckBox title="Upper deck"><ColGroup cols={ubCols.slice(0, left)} w="w-16" /><AisleDivider /><ColGroup cols={ubCols.slice(left)} w="w-16" /></DeckBox>
         </div>
       </div>
     )
@@ -149,18 +151,10 @@ function LayoutPreview({ lay }) {
     const sr = +lay.right_seater_rows || 0
     const ur = +lay.right_ub_rows || 0
     const lbAll = [], seaterAll = [], ubLeftAll = [], ubRightAll = []
-    for (let r = 0; r < lr; r++) {
-      for (let c = 0; c < left; c++) lbAll.push(mkSeat('lb'))
-    }
-    for (let r = 0; r < lr; r++) {
-      for (let c = 0; c < left; c++) ubLeftAll.push(mkSeat('ub'))
-    }
-    for (let r = 0; r < sr; r++) {
-      for (let c = 0; c < right; c++) seaterAll.push(mkSeat('seater'))
-    }
-    for (let r = 0; r < ur; r++) {
-      for (let c = 0; c < right; c++) ubRightAll.push(mkSeat('ub'))
-    }
+    for (let r = 0; r < lr; r++) for (let c = 0; c < left; c++) lbAll.push(mkSeat('lb'))
+    for (let r = 0; r < lr; r++) for (let c = 0; c < left; c++) ubLeftAll.push(mkSeat('ub'))
+    for (let r = 0; r < sr; r++) for (let c = 0; c < right; c++) seaterAll.push(mkSeat('seater'))
+    for (let r = 0; r < ur; r++) for (let c = 0; c < right; c++) ubRightAll.push(mkSeat('ub'))
     const lbCols      = Array.from({ length: left },  (_, c) => lbAll.filter((_, i) => i % left === c))
     const ubLeftCols  = Array.from({ length: left },  (_, c) => ubLeftAll.filter((_, i) => i % left === c))
     const seaterCols  = Array.from({ length: right }, (_, c) => seaterAll.filter((_, i) => i % right === c))
@@ -169,10 +163,10 @@ function LayoutPreview({ lay }) {
       <div>{legend}
         <div className="flex gap-3 overflow-x-auto">
           <DeckBox title="Lower deck (Left=LB, Right=Seater)">
-            <ColGroup cols={lbCols} /><AisleDivider /><ColGroup cols={seaterCols} />
+            <ColGroup cols={lbCols} w="w-16" /><AisleDivider /><ColGroup cols={seaterCols} w="w-14" />
           </DeckBox>
           <DeckBox title="Upper deck (Left=UB, Right=UB)">
-            <ColGroup cols={ubLeftCols} /><AisleDivider /><ColGroup cols={ubRightCols} />
+            <ColGroup cols={ubLeftCols} w="w-16" /><AisleDivider /><ColGroup cols={ubRightCols} w="w-16" />
           </DeckBox>
         </div>
       </div>

@@ -15,28 +15,27 @@ function Seat({ seat, selected, onToggle, type = 'seater' }) {
               :             { box: 'border-green-400 bg-white',    pill: 'bg-green-100', text: 'text-slate-700' }
 
   if (type === 'sleeper') {
-    // tall berth — horizontal orientation (lies along bus length)
     return (
       <motion.button
-        whileHover={canPick ? { scale: 1.04 } : {}}
-        whileTap={canPick   ? { scale: 0.96 } : {}}
+        whileHover={canPick ? { scale: 1.03 } : {}}
+        whileTap={canPick   ? { scale: 0.97 } : {}}
         onClick={() => canPick && onToggle(seat)}
         disabled={!canPick}
         title={`${seat_number} ₹${price}${isSold ? ' (Sold)' : isLady ? ' (Ladies)' : ''}`}
-        className={`relative w-full h-10 rounded-xl border-2 ${color.box} flex items-center justify-between px-2 ${canPick ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+        className={`relative w-full h-12 rounded-lg border-2 ${color.box} flex items-center gap-1.5 px-2 ${canPick ? 'cursor-pointer' : 'cursor-not-allowed'}`}
       >
-        {/* pillow at left end */}
-        <div className={`w-2 h-6 rounded-md ${color.pill} flex-shrink-0`} />
-        <div className="flex flex-col items-center flex-1">
-          <span className={`text-[10px] font-bold ${color.text}`}>{seat_number}</span>
-          <span className={`text-[9px] ${color.text} opacity-80`}>{isSold ? 'Sold' : `₹${price}`}</span>
+        {/* pillow */}
+        <div className={`w-3 h-7 rounded-md ${color.pill} flex-shrink-0`} />
+        <div className="flex flex-col items-start flex-1 min-w-0">
+          <span className={`text-[11px] font-bold ${color.text} leading-tight`}>{seat_number}</span>
+          <span className={`text-[9px] ${color.text} opacity-75`}>{isSold ? 'Sold' : `₹${price}`}</span>
         </div>
-        {selected && <span className="text-green-600 text-xs font-bold">✓</span>}
+        {selected && <span className="text-green-600 text-[10px] font-bold flex-shrink-0">✓</span>}
       </motion.button>
     )
   }
 
-  // seater — chair shape (upright)
+  // seater — chair shape
   return (
     <motion.button
       whileHover={canPick ? { scale: 1.06 } : {}}
@@ -44,21 +43,21 @@ function Seat({ seat, selected, onToggle, type = 'seater' }) {
       onClick={() => canPick && onToggle(seat)}
       disabled={!canPick}
       title={`${seat_number} ₹${price}${isSold ? ' (Sold)' : isLady ? ' (Ladies)' : ''}`}
-      className={`flex flex-col items-center gap-0.5 ${canPick ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+      className={`flex flex-col items-center gap-0.5 w-full ${canPick ? 'cursor-pointer' : 'cursor-not-allowed'}`}
     >
-      <div className={`w-11 h-12 rounded-t-xl border-2 ${color.box} relative flex flex-col justify-end`}>
-        {/* headrest */}
-        <div className={`absolute -top-1.5 left-1.5 right-1.5 flex gap-1`}>
+      <div className={`w-full h-12 rounded-t-xl border-2 ${color.box} relative flex flex-col justify-end`}>
+        {/* headrest bumps */}
+        <div className="absolute -top-1.5 left-2 right-2 flex gap-1">
           <div className={`flex-1 h-2 rounded-full ${color.pill}`} />
           <div className={`flex-1 h-2 rounded-full ${color.pill}`} />
         </div>
         {/* seat base */}
         <div className={`w-full h-3 rounded-b-lg ${color.pill} opacity-60`} />
-        <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${color.text}`}>
+        <span className={`absolute inset-0 flex items-center justify-center text-[11px] font-bold ${color.text}`}>
           {isSold ? 'Sold' : seat_number}
         </span>
       </div>
-      <span className={`text-[10px] font-medium ${color.text}`}>{isSold ? '' : `₹${price}`}</span>
+      <span className={`text-[9px] font-medium ${color.text}`}>{isSold ? '' : `₹${price}`}</span>
     </motion.button>
   )
 }
@@ -66,7 +65,7 @@ function Seat({ seat, selected, onToggle, type = 'seater' }) {
 // ── Deck panel ────────────────────────────────────────────────────────────────
 function DeckPanel({ title, showSteering, children }) {
   return (
-    <div className="flex-1 min-w-[160px]">
+    <div className="flex-1">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-bold text-slate-700">{title}</span>
         {showSteering && (
@@ -104,25 +103,23 @@ export default function SeatMap({ seats, layout }) {
   // left columns | aisle | right columns
   if (kind === 'seater') {
     const cols = left + right
-    // build column arrays: col[c] = seats in that column position
     const columns = Array.from({ length: cols }, (_, c) =>
       sorted.filter((_, i) => i % cols === c)
     )
+    const colW = `w-14`
     return (
       <div className="space-y-5">
         <Legend kind={kind} />
         <DeckPanel title="Seats" showSteering>
-          <div className="flex gap-1 items-start">
-            {/* left columns */}
+          <div className="flex gap-2 items-start">
             {columns.slice(0, left).map((col, ci) => (
-              <div key={ci} className="flex flex-col gap-2 flex-1">
+              <div key={ci} className={`flex flex-col gap-2 ${colW}`}>
                 {col.map(s => <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="seater" />)}
               </div>
             ))}
             {right > 0 && <Aisle />}
-            {/* right columns */}
             {columns.slice(left).map((col, ci) => (
-              <div key={ci} className="flex flex-col gap-2 flex-1">
+              <div key={ci} className={`flex flex-col gap-2 ${colW}`}>
                 {col.map(s => <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="seater" />)}
               </div>
             ))}
@@ -139,8 +136,9 @@ export default function SeatMap({ seats, layout }) {
   // left cols | aisle | right cols  (each col = one berth-column)
   if (kind === 'sleeper') {
     const cols = left + right
-    const lb = sorted.filter(s => s.seat_type === 'lower' || s.deck === 'lower')
-    const ub = sorted.filter(s => s.seat_type === 'upper' || s.deck === 'upper')
+    const lb = sorted.filter(s => s.seat_type === 'lower')
+    const ub = sorted.filter(s => s.seat_type === 'upper')
+    const berthW = `w-20`
 
     const sleeperCols = (list) => Array.from({ length: cols }, (_, c) =>
       list.filter((_, i) => i % cols === c)
@@ -152,13 +150,13 @@ export default function SeatMap({ seats, layout }) {
         <DeckPanel title={title} showSteering={title === 'Lower deck'}>
           <div className="flex gap-2 items-start">
             {colArrays.slice(0, left).map((col, ci) => (
-              <div key={ci} className="flex flex-col gap-1.5 flex-1">
+              <div key={ci} className={`flex flex-col gap-1.5 ${berthW}`}>
                 {col.map(s => <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
               </div>
             ))}
             {right > 0 && <Aisle />}
             {colArrays.slice(left).map((col, ci) => (
-              <div key={ci} className="flex flex-col gap-1.5 flex-1">
+              <div key={ci} className={`flex flex-col gap-1.5 ${berthW}`}>
                 {col.map(s => <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
               </div>
             ))}
@@ -202,35 +200,38 @@ export default function SeatMap({ seats, layout }) {
     const seaterCols  = mkCols(seaterAll,  right)
     const ubRightCols = mkCols(ubRightAll, right)
 
+    const berthW = `w-20`
+    const chairW = `w-14`
+
     return (
       <div className="space-y-5">
         <Legend kind={kind} />
         <div className="flex flex-col md:flex-row gap-4">
-          <DeckPanel title="Lower deck" showSteering>
+          <DeckPanel title="Lower deck (Left=LB, Right=Seater)" showSteering>
             <div className="flex gap-2 items-start">
               {lbCols.map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-1.5 flex-1">
+                <div key={ci} className={`flex flex-col gap-1.5 ${berthW}`}>
                   {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
                 </div>
               ))}
               <Aisle />
               {seaterCols.map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-2 flex-1">
+                <div key={ci} className={`flex flex-col gap-2 ${chairW}`}>
                   {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="seater" />)}
                 </div>
               ))}
             </div>
           </DeckPanel>
-          <DeckPanel title="Upper deck">
+          <DeckPanel title="Upper deck (Left=UB, Right=UB)">
             <div className="flex gap-2 items-start">
               {ubLeftCols.map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-1.5 flex-1">
+                <div key={ci} className={`flex flex-col gap-1.5 ${berthW}`}>
                   {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
                 </div>
               ))}
               <Aisle />
               {ubRightCols.map((col, ci) => (
-                <div key={ci} className="flex flex-col gap-1.5 flex-1">
+                <div key={ci} className={`flex flex-col gap-1.5 ${berthW}`}>
                   {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
                 </div>
               ))}
@@ -247,24 +248,22 @@ export default function SeatMap({ seats, layout }) {
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 function Legend({ kind }) {
+  const items = [
+    kind !== 'sleeper' ? { label: 'Seater', cls: 'border-green-400 bg-white' } : null,
+    kind !== 'seater'  ? { label: 'LB', cls: 'border-green-500 bg-white' } : null,
+    kind !== 'seater'  ? { label: 'UB', cls: 'border-amber-400 bg-yellow-50' } : null,
+    { label: 'Selected', cls: 'border-green-500 bg-green-50' },
+    { label: 'Blocked', cls: 'border-slate-200 bg-slate-100' },
+    { label: 'Ladies', cls: 'border-pink-400 bg-pink-50' },
+  ].filter(Boolean)
   return (
-    <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-      <div className="flex items-center gap-1.5">
-        <div className="w-8 h-5 rounded-lg border-2 border-green-400 bg-white" />
-        Available
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-8 h-5 rounded-lg border-2 border-green-500 bg-green-50" />
-        Selected
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-8 h-5 rounded-lg border-2 border-slate-200 bg-slate-100" />
-        Sold
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-8 h-5 rounded-lg border-2 border-pink-400 bg-pink-50" />
-        Ladies
-      </div>
+    <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+      {items.map(({ label, cls }) => (
+        <div key={label} className="flex items-center gap-1.5">
+          <div className={`w-7 h-4 rounded border-2 ${cls}`} />
+          {label}
+        </div>
+      ))}
     </div>
   )
 }
