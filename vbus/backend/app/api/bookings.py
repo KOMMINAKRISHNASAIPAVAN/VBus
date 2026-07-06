@@ -108,6 +108,24 @@ def get_booking(pnr: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Booking not found")
     return booking
 
+@router.post("/{booking_id}/mark_paid", response_model=BookingDetail)
+def mark_payment_done(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    booking = db.query(Booking).filter(
+        Booking.id == booking_id,
+        Booking.user_id == current_user.id,
+    ).first()
+    if not booking:
+        raise HTTPException(404, "Booking not found")
+    if booking.status != BookingStatus.payment_requested:
+        raise HTTPException(400, "Payment link not yet sent by admin")
+    booking.status = BookingStatus.payment_done
+    db.commit(); db.refresh(booking)
+    return booking
+
 @router.post("/{booking_id}/cancel", response_model=BookingDetail)
 def cancel_booking(
     booking_id: int,

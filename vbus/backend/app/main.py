@@ -18,6 +18,8 @@ for _stmt in (
     f"ALTER TABLE routes ADD COLUMN via_stops {_json_type}",
     "ALTER TYPE seatstatus ADD VALUE IF NOT EXISTS 'blocked'",
     "ALTER TYPE seatstatus ADD VALUE IF NOT EXISTS 'ladies'",
+    "ALTER TYPE bookingstatus ADD VALUE IF NOT EXISTS 'payment_requested'",
+    "ALTER TYPE bookingstatus ADD VALUE IF NOT EXISTS 'payment_done'",
 ):
     try:
         with engine.begin() as conn:

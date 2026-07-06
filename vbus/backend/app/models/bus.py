@@ -19,10 +19,12 @@ class SeatStatus(str, enum.Enum):
     blocked   = "blocked"
 
 class BookingStatus(str, enum.Enum):
-    pending   = "pending"
-    confirmed = "confirmed"
-    cancelled = "cancelled"
-    completed = "completed"
+    pending           = "pending"
+    payment_requested = "payment_requested"
+    payment_done      = "payment_done"
+    confirmed         = "confirmed"
+    cancelled         = "cancelled"
+    completed         = "completed"
 
 class Bus(Base):
     __tablename__ = "buses"

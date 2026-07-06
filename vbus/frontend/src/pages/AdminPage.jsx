@@ -445,6 +445,43 @@ export default function AdminPage() {
       reloadBookings()
     } catch (e) { err(e, 'Failed to update amount') }
   }
+  const sendPaymentLink = async (b) => {
+    try {
+      await api.post(`/admin/bookings/${b.id}/send_payment`)
+      toast.success('Payment link sent to user')
+      reloadBookings()
+      const phone = (b.passenger_info || [])[0]?.phone
+      const seats = (b.passenger_info || []).map(p => p.seat_number).join(', ')
+      const upiLink = `upi://pay?pa=8520998910-3@ybl&pn=VBus&am=${b.total_amount}&cu=INR&tn=VBus+${b.pnr}`
+      if (phone) {
+        const msg = encodeURIComponent(
+          `💳 *VBus Payment Request*\n\nPNR: *${b.pnr}*\nRoute: ${b.boarding_stop} → ${b.dropping_stop}\nSeats: ${seats}\nAmount: *₹${b.total_amount}*\n\nPay via UPI ID: *8520998910-3@ybl*\nTap to pay: ${upiLink}\n\nAfter paying, open VBus app → My Trips → tap *I've Paid*. ✅`
+        )
+        window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank')
+      }
+    } catch (e) { err(e, 'Failed to send payment link') }
+  }
+
+  const markPaymentReceived = async (b) => {
+    try {
+      await api.post(`/admin/bookings/${b.id}/payment_received`)
+      toast.success('Payment confirmed — ticket issued!')
+      reloadBookings(); loadCore()
+      const phone = (b.passenger_info || [])[0]?.phone
+      const seats = (b.passenger_info || []).map(p => p.seat_number).join(', ')
+      if (phone) {
+        const userMsg = encodeURIComponent(
+          `✅ *VBus Ticket Confirmed!*\n\nPNR: *${b.pnr}*\nRoute: ${b.boarding_stop} → ${b.dropping_stop}\nSeats: ${seats}\nAmount Paid: ₹${b.total_amount}\n\nPayment verified. Have a safe journey! 🚌\nView ticket in VBus app → My Trips.`
+        )
+        window.open(`https://wa.me/91${phone}?text=${userMsg}`, '_blank')
+      }
+      const adminMsg = encodeURIComponent(
+        `✅ Payment Confirmed\nPNR: ${b.pnr} | ${b.boarding_stop} → ${b.dropping_stop}\nSeats: ${seats} | ₹${b.total_amount}\nPassenger: ${(b.passenger_info || [])[0]?.name} | +91${phone}`
+      )
+      window.open(`https://wa.me/918520998910?text=${adminMsg}`, '_blank')
+    } catch (e) { err(e, 'Failed to confirm payment') }
+  }
+
   const confirmBk = async (b) => {
     try {
       await api.post(`/admin/bookings/${b.id}/confirm`)
@@ -497,8 +534,12 @@ Ticket has been confirmed and sent to user.`
     } catch (e) { err(e, 'Failed to reject') }
   }
   const stBadge = {
-    pending: 'bg-amber-100 text-amber-700', confirmed: 'bg-green-100 text-green-700',
-    cancelled: 'bg-red-100 text-red-700', completed: 'bg-blue-100 text-blue-700',
+    pending:           'bg-amber-100 text-amber-700',
+    payment_requested: 'bg-blue-100 text-blue-700',
+    payment_done:      'bg-purple-100 text-purple-700',
+    confirmed:         'bg-green-100 text-green-700',
+    cancelled:         'bg-red-100 text-red-700',
+    completed:         'bg-blue-100 text-blue-700',
   }
 
   const label = 'text-xs font-medium text-slate-500 mb-1 block'
@@ -840,12 +881,24 @@ Ticket has been confirmed and sent to user.`
                         <td className="py-2 pr-4"><span className={`text-xs px-2 py-0.5 rounded-full capitalize ${stBadge[b.status] || 'bg-slate-100'}`}>{b.status}</span></td>
                         <td className="py-2 pr-4 text-slate-500">{new Date(b.booked_at).toLocaleDateString()}</td>
                         <td className="py-2">
-                          {b.status === 'pending' ? (
+                          {b.status === 'pending' && (
                             <div className="flex gap-2">
-                              <button onClick={() => confirmBk(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700">Confirm</button>
+                              <button onClick={() => sendPaymentLink(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Send Payment Link</button>
                               <button onClick={() => rejectBk(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Reject</button>
                             </div>
-                          ) : <span className="text-xs text-slate-400">—</span>}
+                          )}
+                          {b.status === 'payment_requested' && (
+                            <span className="text-xs px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">Awaiting payment</span>
+                          )}
+                          {b.status === 'payment_done' && (
+                            <div className="flex gap-2">
+                              <button onClick={() => markPaymentReceived(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700">Payment Received</button>
+                              <button onClick={() => rejectBk(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Reject</button>
+                            </div>
+                          )}
+                          {(b.status === 'confirmed' || b.status === 'cancelled' || b.status === 'completed') && (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
                         </td>
                       </tr>
                     )

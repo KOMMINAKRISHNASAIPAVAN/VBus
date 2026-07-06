@@ -315,6 +315,31 @@ def update_booking_amount(booking_id: int, data: AmountUpdate, db: Session = Dep
     db.commit(); db.refresh(b)
     return {"id": b.id, "total_amount": b.total_amount}
 
+@router.post("/bookings/{booking_id}/send_payment")
+def send_payment_link(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
+    """Admin confirms price and sends payment link to user."""
+    b = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if b.status not in (BookingStatus.pending,):
+        raise HTTPException(400, f"Cannot send payment link for booking in status '{b.status}'")
+    b.status = BookingStatus.payment_requested
+    db.commit(); db.refresh(b)
+    return b
+
+@router.post("/bookings/{booking_id}/payment_received")
+def payment_received(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
+    """Admin marks payment as received and confirms the ticket."""
+    b = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if b.status not in (BookingStatus.payment_done, BookingStatus.payment_requested):
+        raise HTTPException(400, f"Cannot confirm payment for booking in status '{b.status}'")
+    b.status = BookingStatus.confirmed
+    db.commit(); db.refresh(b)
+    publish_booking_event("booking_confirmed", b)
+    return b
+
 @router.post("/bookings/{booking_id}/confirm")
 def confirm_booking(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
     b = db.query(Booking).filter(Booking.id == booking_id).first()
