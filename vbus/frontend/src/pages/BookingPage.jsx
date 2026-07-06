@@ -56,25 +56,13 @@ function Step3Pay({ total, selectedTrip, passengers, selectedSeats, booking, onB
             </div>
 
             {method === 'upi' && id === 'upi' && (
-              <div className="px-5 pb-5 border-t border-vbus-100">
-                <p className="text-xs text-slate-500 mt-3 mb-4">
-                  Scan the QR or use the UPI ID below to pay <b className="text-vbus-700">₹{grandTotal}</b>. After payment, click <b>Request Booking</b> — admin will verify and confirm your ticket.
+              <div className="px-5 pb-5 border-t border-vbus-100 flex flex-col items-center">
+                <p className="text-xs text-slate-500 mt-3 mb-4 text-center">
+                  Scan the QR to pay <b className="text-vbus-700">₹{grandTotal}</b>. After payment, click <b>Request Booking</b>.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-5 items-start">
-                  <img src="/payment-qr.jpg" alt="QR" className="w-36 h-36 rounded-xl border border-slate-200 object-cover flex-shrink-0" />
-                  <div className="flex-1 space-y-2.5 w-full">
-                    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3">
-                      <div className="text-xs text-slate-400 mb-0.5">UPI ID (PhonePe / GPay / Paytm)</div>
-                      <div className="font-mono font-bold text-slate-900 text-sm select-all tracking-wide">8520998910-3@ybl</div>
-                    </div>
-                    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3">
-                      <div className="text-xs text-slate-400 mb-0.5">Account Name</div>
-                      <div className="font-semibold text-slate-900 text-sm">HDFC Bank - 1730</div>
-                    </div>
-                    <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed">
-                      After paying, click <b>Request Booking</b> below. Admin will verify and confirm your ticket.
-                    </div>
-                  </div>
+                <img src="/payment-qr.jpg" alt="QR" className="w-48 h-48 rounded-xl border border-slate-200 object-cover" />
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed mt-4 w-full text-center">
+                  After paying, click <b>Request Booking</b> below. Admin will verify and confirm your ticket.
                 </div>
               </div>
             )}
