@@ -1,12 +1,29 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, User, Bus, ShieldCheck, Check, AlertCircle, Phone } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, Bus, ShieldCheck, Check, AlertCircle, Phone, Tag, X, CheckCircle2 } from 'lucide-react'
 import { useBookingStore } from '../store'
 import SeatMap from '../components/booking/SeatMap'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 import { vName, vAge, vPhone } from '../utils/validate'
+
+const COUPONS = {
+  FIRST:    { discount: 250, maxDiscount: 250, desc: 'Save up to ₹250 on bus tickets', condition: () => true },
+  SUPERHIT: { discount: 300, maxDiscount: 300, desc: 'Save up to ₹300 on AP & Telangana routes',
+    condition: (from, to) => {
+      const AP_TG = ['Hyderabad','Vijayawada','Guntur','Visakhapatnam','Tirupati','Warangal','Rajahmundry','Eluru','Khammam','Karimnagar','Nizamabad','Secunderabad','Suryapet']
+      return AP_TG.some(c => c === from || c === to)
+    }
+  },
+  CASH300:  { discount: 300, maxDiscount: 300, desc: 'Save up to ₹300 on Karnataka, Tamil Nadu & Kerala routes',
+    condition: (from, to) => {
+      const KTK_TN = ['Bangalore','Chennai','Coimbatore','Madurai','Salem','Erode','Mysore','Hubli','Pondicherry']
+      return KTK_TN.some(c => c === from || c === to)
+    }
+  },
+  VBUS500:  { discount: 500, maxDiscount: 500, desc: 'Save up to ₹500 on first booking', condition: () => true },
+}
 
 const STEPS = ['Select Seats', 'Passenger Details', 'Review & Request']
 
@@ -20,6 +37,9 @@ export default function BookingPage() {
   const [booking, setBooking] = useState(false)
   const [alertMsg, setAlertMsg] = useState('')
   const [requested, setRequested] = useState(null)
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [couponError, setCouponError] = useState('')
 
   useEffect(() => {
     const boarding = selectedTrip?.origin?.city || ''
@@ -87,10 +107,13 @@ export default function BookingPage() {
       toast.success('Booking request sent to admin!')
 
       // WhatsApp to admin — new booking request
-      const seats = passengers.map(p => p.seat_number).join(', ')
+      const bookedSeats = passengers.map(p => p.seat_number).join(', ')
       const phone = passengers[0]?.phone
+      const couponLine = appliedCoupon
+        ? `\nCoupon: ${appliedCoupon.code} (−₹${discount})\nFinal Amount: ₹${finalTotal}`
+        : `\nTotal: ₹${total}`
       const adminMsg = encodeURIComponent(
-        `🔔 *New Booking Request*\n\nPNR: *${data.pnr}*\nRoute: ${selectedTrip.origin.city} → ${selectedTrip.destination.city}\nDate: ${selectedTrip.travel_date}\nBus: ${selectedTrip.bus.name}\nSeats: ${seats}\nPassenger: ${passengers[0]?.name} | +91${phone}\n\nPlease review and send payment link to the user.`
+        `🔔 *New Booking Request*\n\nPNR: *${data.pnr}*\nRoute: ${selectedTrip.origin.city} → ${selectedTrip.destination.city}\nDate: ${selectedTrip.travel_date}\nBus: ${selectedTrip.bus.name}\nSeats: ${bookedSeats}\nPassenger: ${passengers[0]?.name} | +91${phone}${couponLine}\n\nPlease review and send payment link to the user.`
       )
       window.open(`https://wa.me/918520998910?text=${adminMsg}`, '_blank')
 
@@ -103,6 +126,26 @@ export default function BookingPage() {
   }
 
   const total = selectedSeats.reduce((s, seat) => s + seat.price, 0)
+  const discount = appliedCoupon ? Math.min(appliedCoupon.discount, total) : 0
+  const finalTotal = total - discount
+
+  const applyCoupon = () => {
+    setCouponError('')
+    const code = couponInput.trim().toUpperCase()
+    const coupon = COUPONS[code]
+    if (!coupon) return setCouponError('Invalid coupon code')
+    const from = selectedTrip.origin.city
+    const to = selectedTrip.destination.city
+    if (!coupon.condition(from, to)) return setCouponError('This coupon is not valid for your route')
+    setAppliedCoupon({ ...coupon, code })
+    toast.success(`Coupon applied! You save ₹${Math.min(coupon.discount, total)}`)
+  }
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponInput('')
+    setCouponError('')
+  }
 
   return (
     <div className="min-h-screen bg-hero-gradient pt-20">
@@ -240,11 +283,66 @@ export default function BookingPage() {
                   </div>
                 ))}
               </div>
-              <div className="border-t border-slate-200 mt-4 pt-4 flex justify-between">
-                <span className="font-semibold text-slate-900">Estimated Total</span>
-                <span className="text-xl font-bold text-vbus-600">₹{total}</span>
+              <div className="border-t border-slate-200 mt-4 pt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Subtotal</span>
+                  <span className="text-slate-900 font-medium">₹{total}</span>
+                </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600">Discount ({appliedCoupon.code})</span>
+                    <span className="text-green-600 font-medium">− ₹{discount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-slate-100">
+                  <span className="font-semibold text-slate-900">Estimated Total</span>
+                  <span className="text-xl font-bold text-vbus-600">₹{finalTotal}</span>
+                </div>
               </div>
               <p className="text-xs text-slate-400 mt-1">Final amount will be confirmed by admin before payment.</p>
+            </div>
+
+            {/* Coupon */}
+            <div className="glass-card p-5">
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <Tag className="w-4 h-4 text-vbus-600" /> Apply Coupon
+              </h3>
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <div>
+                      <div className="font-semibold text-green-700 text-sm">{appliedCoupon.code} applied</div>
+                      <div className="text-xs text-green-600">You save ₹{discount}</div>
+                    </div>
+                  </div>
+                  <button onClick={removeCoupon} className="text-slate-400 hover:text-red-500 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <input
+                      value={couponInput}
+                      onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError('') }}
+                      placeholder="Enter coupon code"
+                      className="input-field flex-1 uppercase tracking-widest font-mono"
+                    />
+                    <button onClick={applyCoupon} className="btn-primary px-5 shrink-0">Apply</button>
+                  </div>
+                  {couponError && <p className="text-xs text-red-500 mt-1.5">{couponError}</p>}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {Object.entries(COUPONS).map(([code, c]) => (
+                      <button key={code} type="button"
+                        onClick={() => { setCouponInput(code); setCouponError('') }}
+                        className="text-xs px-3 py-1.5 rounded-full border border-vbus-200 bg-vbus-50 text-vbus-700 hover:bg-vbus-100 font-mono font-semibold transition-colors">
+                        {code}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* How it works */}
