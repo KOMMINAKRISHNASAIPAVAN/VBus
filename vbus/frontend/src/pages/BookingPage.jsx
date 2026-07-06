@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, User, Bus, ShieldCheck, Check, AlertCircle, Phone } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, Bus, ShieldCheck, Check, AlertCircle, Phone, QrCode, CreditCard, Landmark } from 'lucide-react'
 import { useBookingStore } from '../store'
 import SeatMap from '../components/booking/SeatMap'
 import api from '../utils/api'
@@ -9,6 +9,168 @@ import toast from 'react-hot-toast'
 import { vName, vAge, vPhone } from '../utils/validate'
 
 const STEPS = ['Select Seats', 'Passenger Details', 'Review & Pay']
+
+// ── Step 3: Payment page (RedBus-style) ─────────────────────────────────────
+function Step3Pay({ total, selectedTrip, passengers, selectedSeats, booking, onBook, onBack }) {
+  const [method, setMethod] = useState('upi')
+  const gst = Math.round(total * 0.05)
+  const grandTotal = total + gst
+
+  const methods = [
+    { id: 'upi',  icon: QrCode,     label: 'UPI', sub: 'Pay through QR code' },
+    { id: 'card', icon: CreditCard, label: 'Credit / Debit card', sub: 'VISA, MasterCard and more' },
+    { id: 'nb',   icon: Landmark,   label: 'Netbanking', sub: 'All major banks available' },
+  ]
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 items-start">
+      {/* Left — payment methods */}
+      <div className="flex-1 space-y-3">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-bold text-slate-900">Pay ₹{grandTotal}</h2>
+          <button onClick={onBack} className="text-sm text-vbus-600 hover:underline flex items-center gap-1">
+            <ChevronLeft className="w-4 h-4" /> Back
+          </button>
+        </div>
+
+        {methods.map(({ id, icon: Icon, label, sub }) => (
+          <div key={id}
+            onClick={() => setMethod(id)}
+            className={`rounded-2xl border-2 cursor-pointer transition-all ${
+              method === id ? 'border-vbus-500 bg-vbus-50' : 'border-slate-200 bg-white hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center justify-between px-5 py-4">
+              <div className="flex items-center gap-3">
+                <Icon className={`w-5 h-5 ${method === id ? 'text-vbus-600' : 'text-slate-500'}`} />
+                <div>
+                  <div className={`font-semibold text-sm ${method === id ? 'text-vbus-700' : 'text-slate-800'}`}>{label}</div>
+                  <div className="text-xs text-slate-500">{sub}</div>
+                </div>
+              </div>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                method === id ? 'border-vbus-500' : 'border-slate-300'
+              }`}>
+                {method === id && <div className="w-2.5 h-2.5 rounded-full bg-vbus-500" />}
+              </div>
+            </div>
+
+            {method === 'upi' && id === 'upi' && (
+              <div className="px-5 pb-5 border-t border-vbus-100">
+                <p className="text-xs text-slate-500 mt-3 mb-4">
+                  Scan the QR or use the UPI ID below to pay <b className="text-vbus-700">₹{grandTotal}</b>. After payment, click <b>Request Booking</b> — admin will verify and confirm your ticket.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-5 items-start">
+                  <img src="/payment-qr.jpg" alt="QR" className="w-36 h-36 rounded-xl border border-slate-200 object-cover flex-shrink-0" />
+                  <div className="flex-1 space-y-2.5 w-full">
+                    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3">
+                      <div className="text-xs text-slate-400 mb-0.5">UPI ID (PhonePe / GPay / Paytm)</div>
+                      <div className="font-mono font-bold text-slate-900 text-sm select-all tracking-wide">8520998910-3@ybl</div>
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3">
+                      <div className="text-xs text-slate-400 mb-0.5">Account Name</div>
+                      <div className="font-semibold text-slate-900 text-sm">HDFC Bank - 1730</div>
+                    </div>
+                    <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed">
+                      After paying, click <b>Request Booking</b> below. Admin will verify and confirm your ticket.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {method === id && id !== 'upi' && (
+              <div className="px-5 pb-4 border-t border-slate-100">
+                <p className="text-sm text-slate-400 mt-3">This payment method is coming soon. Please use UPI / QR for now.</p>
+              </div>
+            )}
+          </div>
+        ))}
+
+        <button
+          onClick={onBook}
+          disabled={booking || method !== 'upi'}
+          className="btn-primary w-full flex items-center justify-center gap-2 mt-2 py-3 text-base disabled:opacity-60"
+        >
+          {booking
+            ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting...</>
+            : <><ShieldCheck className="w-5 h-5" /> Request Booking</>}
+        </button>
+        {method !== 'upi' && (
+          <p className="text-xs text-center text-slate-400">Select UPI to proceed</p>
+        )}
+      </div>
+
+      {/* Right — order summary */}
+      <div className="w-full lg:w-80 flex-shrink-0">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Fare Summary</div>
+            <div className="space-y-2 text-sm">
+              {selectedSeats.map((s, i) => (
+                <div key={i} className="flex justify-between">
+                  <span className="text-slate-600">Seat {s.seat_number} ({s.seat_type || 'seater'})</span>
+                  <span className="font-medium">₹{s.price}</span>
+                </div>
+              ))}
+              <div className="flex justify-between text-slate-500">
+                <span>GST (5%)</span>
+                <span>₹{gst}</span>
+              </div>
+            </div>
+            <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between">
+              <span className="font-bold text-slate-900 text-base">Total</span>
+              <span className="font-bold text-slate-900 text-xl">₹{grandTotal}</span>
+            </div>
+          </div>
+
+          <div className="px-5 py-4 border-b border-slate-100">
+            <div className="font-semibold text-slate-900 text-sm mb-1">{selectedTrip.bus.name}</div>
+            <div className="text-xs text-slate-500 mb-3 capitalize">{selectedTrip.bus.bus_type.replace('_', ' ')}</div>
+            <div className="flex gap-3 items-stretch">
+              <div className="flex flex-col items-center gap-1 pt-1">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <div className="flex-1 w-px bg-slate-200" />
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <div className="font-semibold text-slate-900 text-sm">{selectedTrip.departure_time}</div>
+                  <div className="text-xs text-slate-500">{selectedTrip.origin.city}</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900 text-sm">{selectedTrip.arrival_time}</div>
+                  <div className="text-xs text-slate-500">{selectedTrip.destination.city}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-5 py-4">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Passengers</div>
+            <div className="space-y-2">
+              {passengers.map((p, i) => (
+                <div key={i} className="flex justify-between items-start text-sm">
+                  <div>
+                    <div className="font-medium text-slate-900">{p.name}</div>
+                    <div className="text-xs text-slate-500 capitalize">{p.gender} · {p.age} yrs</div>
+                  </div>
+                  <span className="text-xs text-slate-500 mt-0.5">Seat {p.seat_number}</span>
+                </div>
+              ))}
+            </div>
+            {passengers[0]?.phone && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <div className="text-xs text-slate-500">Your ticket will be sent to</div>
+                <div className="text-sm font-medium text-slate-900 mt-0.5">+91 {passengers[0].phone}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function BookingPage() {
   const { tripId } = useParams()
@@ -204,85 +366,31 @@ export default function BookingPage() {
 
         {/* Step 3: Review & Pay */}
         {step === 3 && (
-          <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} className="space-y-4">
-            <div className="glass-card p-5">
-              <h3 className="font-semibold text-slate-900 mb-4">Journey Details</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {[
-                  ['From', selectedTrip.origin.city],
-                  ['To', selectedTrip.destination.city],
-                  ['Date', String(selectedTrip.travel_date)],
-                  ['Departure', selectedTrip.departure_time],
-                  ['Bus', selectedTrip.bus.name],
-                  ['Type', selectedTrip.bus.bus_type],
-                ].map(([k,v]) => (
-                  <div key={k}>
-                    <div className="text-slate-500 text-xs mb-0.5">{k}</div>
-                    <div className="text-slate-900 font-medium">{v}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="glass-card p-5">
-              <h3 className="font-semibold text-slate-900 mb-4">Passengers</h3>
-              <div className="space-y-2">
-                {passengers.map((p, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700">{p.name} ({p.age}, {p.gender})</span>
-                    <span className="text-vbus-600 font-medium">Seat {p.seat_number} — ₹{selectedSeats[i]?.price}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="border-t border-slate-200 mt-4 pt-4 flex justify-between">
-                <span className="font-semibold text-slate-900">Total</span>
-                <span className="text-xl font-bold text-vbus-600">₹{total}</span>
-              </div>
-            </div>
-
-            {/* Payment Section */}
-            <div className="glass-card p-5">
-              <h3 className="font-semibold text-slate-900 mb-1 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-vbus-600" /> Pay via UPI / QR
-              </h3>
-              <p className="text-xs text-slate-500 mb-4">Scan the QR or use the UPI ID below to pay <b className="text-vbus-700">₹{total}</b>. After payment, your booking request will be sent to admin for confirmation.</p>
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                <img src="/payment-qr.jpg" alt="Payment QR" className="w-44 h-44 rounded-xl border border-slate-200 object-cover" />
-                <div className="flex-1 space-y-3 w-full">
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                    <div className="text-xs text-slate-500 mb-1">UPI ID (PhonePe / GPay / Paytm)</div>
-                    <div className="font-mono font-semibold text-slate-900 text-sm select-all">8520998910-3@ybl</div>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                    <div className="text-xs text-slate-500 mb-1">Account Name</div>
-                    <div className="font-semibold text-slate-900 text-sm">HDFC Bank - 1730</div>
-                  </div>
-                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                    After paying, click <b>Request Booking</b> below. Admin will verify and confirm your ticket.
-                  </div>
-                </div>
-              </div>
-            </div>
+          <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}>
+            <Step3Pay
+              total={total}
+              selectedTrip={selectedTrip}
+              passengers={passengers}
+              selectedSeats={selectedSeats}
+              booking={booking}
+              onBook={handleBook}
+              onBack={() => setStep(2)}
+            />
           </motion.div>
         )}
 
-        {/* Navigation */}
-        <div className="mt-6 flex justify-between">
-          <button onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)}
-            className="btn-outline flex items-center gap-2">
-            <ChevronLeft className="w-4 h-4" /> Back
-          </button>
-          {step < 3 ? (
+        {/* Navigation — hidden on step 3 (Step3Pay has its own button) */}
+        {step !== 3 && (
+          <div className="mt-6 flex justify-between">
+            <button onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)}
+              className="btn-outline flex items-center gap-2">
+              <ChevronLeft className="w-4 h-4" /> Back
+            </button>
             <button onClick={handleNext} className="btn-primary flex items-center gap-2">
               Continue <ChevronRight className="w-4 h-4" />
             </button>
-          ) : (
-            <button onClick={handleBook} disabled={booking} className="btn-primary flex items-center gap-2 min-w-40">
-              {booking
-                ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting...</>
-                : <><Check className="w-4 h-4" /> Request Booking</>}
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Centered alert modal */}
