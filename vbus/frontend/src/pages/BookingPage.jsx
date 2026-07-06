@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, User, Bus, ShieldCheck, Check, AlertCircle, Phone, QrCode, CreditCard, Landmark } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { useBookingStore } from '../store'
 import SeatMap from '../components/booking/SeatMap'
 import api from '../utils/api'
@@ -60,9 +61,29 @@ function Step3Pay({ total, selectedTrip, passengers, selectedSeats, booking, onB
                 <p className="text-xs text-slate-500 mt-3 mb-4 text-center">
                   Scan the QR to pay <b className="text-vbus-700">₹{grandTotal}</b>. After payment, click <b>Request Booking</b>.
                 </p>
-                <img src="/payment-qr.jpg" alt="QR" className="w-48 h-48 rounded-xl border border-slate-200 object-cover" />
-                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed mt-4 w-full text-center">
-                  After paying, click <b>Request Booking</b> below. Admin will verify and confirm your ticket.
+                {/* Dynamic UPI QR — encodes exact amount */}
+                <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                  <QRCodeSVG
+                    value={`upi://pay?pa=8520998910-3@ybl&pn=VBus&am=${grandTotal}&cu=INR&tn=VBus+Ticket`}
+                    size={192}
+                    bgColor="#ffffff"
+                    fgColor="#1e293b"
+                    level="M"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-2">Scan with any UPI app — amount pre-filled</p>
+                {/* PhonePe deep-link button */}
+                <a
+                  href={`phonepe://pay?pa=8520998910-3@ybl&pn=VBus&am=${grandTotal}&cu=INR&tn=VBus+Ticket`}
+                  className="mt-4 w-full flex items-center justify-center gap-2.5 bg-[#5f259f] hover:bg-[#4e1d85] text-white font-semibold text-sm py-3 rounded-xl transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13.547 4.516c-1.03-.23-2.09-.23-3.12 0L7.5 5.25 4.5 12l3 6.75 2.927.734c1.03.23 2.09.23 3.12 0L16.5 18.75l3-6.75-3-6.75-2.953-.734zM12 15.75a3.75 3.75 0 1 1 0-7.5 3.75 3.75 0 0 1 0 7.5z"/>
+                  </svg>
+                  Pay ₹{grandTotal} via PhonePe
+                </a>
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed mt-3 w-full text-center">
+                  After paying, click <b>Request Booking</b> below.
                 </div>
               </div>
             )}
