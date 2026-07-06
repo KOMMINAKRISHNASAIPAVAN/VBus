@@ -1,5 +1,6 @@
 // City content for the destination detail pages.
 // Keyed by slug (lowercase city name).
+// IMPORTANT: services[] must only contain cities that exist as stops in the DB seed.
 
 const IMG = (id) => `https://images.unsplash.com/${id}?w=1600&q=80&auto=format&fit=crop`
 
@@ -9,8 +10,8 @@ export const DESTINATIONS = {
     state: 'Telangana',
     img: IMG('photo-1696941515998-d83f24967aca'),
     about: [
-      'Hyderabad is the capital of Telangana, also known as Cyberabad and the “City of Pearls.” Established in 1591 by Muhammad Quli Qutb Shah, the city blends ancient heritage with contemporary growth.',
-      'It is renowned for architectural marvels like Charminar, Golconda Fort and Chowmahalla Palace, as well as the IT hub in HITEC City, home to global giants. Its vibrant culture shows in the cuisine, traditional arts and educational institutions.',
+      'Hyderabad is the capital of Telangana, also known as Cyberabad and the "City of Pearls." Established in 1591 by Muhammad Quli Qutb Shah, the city blends ancient heritage with contemporary growth.',
+      'It is renowned for architectural marvels like Charminar, Golconda Fort and Chowmahalla Palace, as well as the IT hub in HITEC City, home to global giants.',
     ],
     places: [
       { name: 'Charminar', desc: 'A symbol of Hyderabad, surrounded by bustling markets of pearls and bangles.' },
@@ -19,14 +20,14 @@ export const DESTINATIONS = {
       { name: 'Birla Mandir', desc: 'A serene marble temple offering panoramic views of the city.' },
       { name: 'Hussain Sagar Lake', desc: 'A picturesque spot with a massive Buddha statue at its centre.' },
     ],
-    services: ['Vijayawada', 'Guntur', 'Bangalore', 'Eluru', 'Tirupati'],
+    services: ['Vijayawada', 'Guntur', 'Bangalore', 'Eluru', 'Tirupati', 'Visakhapatnam', 'Chennai', 'Mumbai', 'Rajahmundry'],
   },
   bangalore: {
     name: 'Bangalore',
     state: 'Karnataka',
     img: IMG('photo-1708782462555-b3af03b4b3d2'),
     about: [
-      'Bangalore, the capital of Karnataka, is India’s “Silicon Valley” — a green, cosmopolitan city famous for its pleasant climate, lush parks and thriving technology scene.',
+      'Bangalore, the capital of Karnataka, is India\'s "Silicon Valley" — a green, cosmopolitan city famous for its pleasant climate, lush parks and thriving technology scene.',
       'From the grand Vidhana Soudha to leafy Cubbon Park and vibrant nightlife, Bangalore balances heritage with a fast-moving modern lifestyle.',
     ],
     places: [
@@ -36,7 +37,7 @@ export const DESTINATIONS = {
       { name: 'Bangalore Palace', desc: 'A Tudor-style royal residence with manicured grounds.' },
       { name: 'ISKCON Temple', desc: 'A modern temple complex on a hilltop.' },
     ],
-    services: ['Chennai', 'Coimbatore', 'Tirupati', 'Salem', 'Pondicherry'],
+    services: ['Hyderabad', 'Chennai', 'Tirupati', 'Vijayawada'],
   },
   chennai: {
     name: 'Chennai',
@@ -49,10 +50,10 @@ export const DESTINATIONS = {
     places: [
       { name: 'Marina Beach', desc: 'A vast, lively seafront stretching along the Bay of Bengal.' },
       { name: 'Kapaleeshwarar Temple', desc: 'A colourful Dravidian temple in Mylapore.' },
-      { name: 'Fort St. George', desc: 'India’s first British fortress, now housing a museum.' },
+      { name: 'Fort St. George', desc: 'India\'s first British fortress, now housing a museum.' },
       { name: 'Santhome Basilica', desc: 'A neo-Gothic church built over the tomb of St. Thomas.' },
     ],
-    services: ['Bangalore', 'Tirupati', 'Pondicherry', 'Coimbatore', 'Salem'],
+    services: ['Bangalore', 'Hyderabad', 'Tirupati'],
   },
   tirupati: {
     name: 'Tirupati',
@@ -68,7 +69,7 @@ export const DESTINATIONS = {
       { name: 'Chandragiri Fort', desc: 'A historic fort with palaces from the Vijayanagara era.' },
       { name: 'Talakona Waterfall', desc: 'The highest waterfall in Andhra Pradesh, set in a forest.' },
     ],
-    services: ['Bangalore', 'Chennai', 'Vijayawada', 'Hyderabad', 'Visakhapatnam'],
+    services: ['Bangalore', 'Chennai', 'Vijayawada', 'Hyderabad'],
   },
   visakhapatnam: {
     name: 'Visakhapatnam',
@@ -84,7 +85,7 @@ export const DESTINATIONS = {
       { name: 'Submarine Museum', desc: 'A real decommissioned submarine turned museum.' },
       { name: 'Araku Valley', desc: 'A scenic hill station famous for coffee plantations.' },
     ],
-    services: ['Vijayawada', 'Hyderabad', 'Tirupati', 'Guntur', 'Eluru'],
+    services: ['Vijayawada', 'Hyderabad', 'Rajahmundry', 'Guntur', 'Eluru'],
   },
   mumbai: {
     name: 'Mumbai',
@@ -95,19 +96,19 @@ export const DESTINATIONS = {
       'From the iconic Gateway of India to the sweeping Marine Drive, Mumbai blends commerce, culture and coastline.',
     ],
     places: [
-      { name: 'Gateway of India', desc: 'The grand seafront arch and the city’s most famous landmark.' },
-      { name: 'Marine Drive', desc: 'A curving promenade nicknamed the “Queen’s Necklace.”' },
+      { name: 'Gateway of India', desc: 'The grand seafront arch and the city\'s most famous landmark.' },
+      { name: 'Marine Drive', desc: 'A curving promenade nicknamed the "Queen\'s Necklace."' },
       { name: 'Elephanta Caves', desc: 'Ancient rock-cut cave temples on an island.' },
       { name: 'Juhu Beach', desc: 'A lively beach famed for street food and sunsets.' },
     ],
-    services: ['Pune', 'Goa', 'Hyderabad', 'Bangalore'],
+    services: ['Pune', 'Hyderabad'],
   },
   goa: {
     name: 'Goa',
     state: 'Goa',
     img: IMG('photo-1512343879784-a960bf40e7f2'),
     about: [
-      'Goa is India’s favourite beach destination — a sun-soaked stretch of palm-fringed coast, Portuguese heritage and laid-back charm.',
+      'Goa is India\'s favourite beach destination — a sun-soaked stretch of palm-fringed coast, Portuguese heritage and laid-back charm.',
       'Golden beaches, historic churches and a vibrant nightlife make Goa a year-round getaway.',
     ],
     places: [
@@ -116,14 +117,14 @@ export const DESTINATIONS = {
       { name: 'Fort Aguada', desc: 'A 17th-century Portuguese fort overlooking the sea.' },
       { name: 'Dudhsagar Falls', desc: 'A spectacular four-tiered waterfall in the Ghats.' },
     ],
-    services: ['Mumbai', 'Pune', 'Bangalore'],
+    services: ['Mumbai', 'Pune'],
   },
   kerala: {
     name: 'Kerala',
     state: 'Kerala',
     img: IMG('photo-1602216056096-3b40cc0c9944'),
     about: [
-      'Kerala, “God’s Own Country,” is a tropical paradise of palm-lined backwaters, misty hill stations and serene beaches.',
+      'Kerala, "God\'s Own Country," is a tropical paradise of palm-lined backwaters, misty hill stations and serene beaches.',
       'Cruise the Alleppey backwaters on a houseboat, sip tea in Munnar, or wander the historic lanes of Fort Kochi.',
     ],
     places: [
@@ -132,39 +133,39 @@ export const DESTINATIONS = {
       { name: 'Fort Kochi', desc: 'Colonial streets, Chinese fishing nets and cafes.' },
       { name: 'Periyar Wildlife Sanctuary', desc: 'A lush reserve famed for elephants.' },
     ],
-    services: ['Bangalore', 'Chennai', 'Coimbatore'],
+    services: ['Bangalore', 'Chennai'],
   },
   jaipur: {
     name: 'Jaipur',
     state: 'Rajasthan',
     img: IMG('photo-1599661046289-e31897846e41'),
     about: [
-      'Jaipur, the “Pink City” and capital of Rajasthan, dazzles with majestic forts, ornate palaces and vibrant bazaars.',
-      'Part of India’s Golden Triangle, it offers a regal glimpse into Rajputana history and culture.',
+      'Jaipur, the "Pink City" and capital of Rajasthan, dazzles with majestic forts, ornate palaces and vibrant bazaars.',
+      'Part of India\'s Golden Triangle, it offers a regal glimpse into Rajputana history and culture.',
     ],
     places: [
-      { name: 'Hawa Mahal', desc: 'The iconic “Palace of Winds” with its honeycomb façade.' },
+      { name: 'Hawa Mahal', desc: 'The iconic "Palace of Winds" with its honeycomb façade.' },
       { name: 'Amber Fort', desc: 'A majestic hilltop fort overlooking Maota Lake.' },
       { name: 'City Palace', desc: 'A royal complex blending Rajput and Mughal styles.' },
       { name: 'Jantar Mantar', desc: 'A UNESCO-listed astronomical observatory.' },
     ],
-    services: ['Delhi', 'Agra'],
+    services: ['Delhi'],
   },
   delhi: {
     name: 'Delhi',
     state: 'Delhi',
     img: IMG('photo-1587474260584-136574528ed5'),
     about: [
-      'Delhi, India’s capital, is a sprawling metropolis where ancient monuments stand beside a fast-paced modern city.',
+      'Delhi, India\'s capital, is a sprawling metropolis where ancient monuments stand beside a fast-paced modern city.',
       'From Mughal masterpieces to wide colonial boulevards, Delhi layers centuries of history into one unforgettable destination.',
     ],
     places: [
       { name: 'India Gate', desc: 'A grand war memorial at the heart of the city.' },
       { name: 'Red Fort', desc: 'A vast Mughal fortress of red sandstone.' },
-      { name: 'Qutub Minar', desc: 'The world’s tallest brick minaret, a UNESCO site.' },
-      { name: 'Lotus Temple', desc: 'A serene, flower-shaped Bahá’í house of worship.' },
+      { name: 'Qutub Minar', desc: 'The world\'s tallest brick minaret, a UNESCO site.' },
+      { name: 'Lotus Temple', desc: 'A serene, flower-shaped Bahá\'í house of worship.' },
     ],
-    services: ['Jaipur', 'Agra'],
+    services: ['Mumbai'],
   },
   agra: {
     name: 'Agra',
@@ -180,7 +181,7 @@ export const DESTINATIONS = {
       { name: 'Fatehpur Sikri', desc: 'A perfectly preserved Mughal ghost city nearby.' },
       { name: 'Mehtab Bagh', desc: 'Riverside gardens with the best Taj sunset views.' },
     ],
-    services: ['Delhi', 'Jaipur'],
+    services: ['Delhi'],
   },
   amritsar: {
     name: 'Amritsar',

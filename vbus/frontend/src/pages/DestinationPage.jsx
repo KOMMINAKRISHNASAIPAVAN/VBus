@@ -23,8 +23,10 @@ export default function DestinationPage() {
     )
   }
 
-  const goSearch = (to) => navigate(`/search?from=${data.name}${to ? `&to=${to}` : ''}`)
-
+  const goSearch = (to) => {
+    const today = new Date().toISOString().split('T')[0]
+    navigate(`/search?from=${encodeURIComponent(data.name)}${to ? `&to=${encodeURIComponent(to)}` : ''}&date=${today}`)
+  }
   return (
     <div className="bg-white">
       {/* Hero */}

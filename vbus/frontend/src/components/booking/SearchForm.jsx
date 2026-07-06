@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MapPin, Calendar, Search, ArrowLeftRight } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { useSearchStore } from '../../store'
@@ -23,6 +23,7 @@ const POPULAR_CITIES = [
 
 export default function SearchForm({ compact = false }) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const { search } = useSearchStore()
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
@@ -31,6 +32,16 @@ export default function SearchForm({ compact = false }) {
   const [loading, setLoading] = useState(false)
   const [showOriginSug, setShowOriginSug] = useState(false)
   const [showDestSug, setShowDestSug] = useState(false)
+
+  // Pre-fill from URL params (e.g. when coming from DestinationPage)
+  useEffect(() => {
+    const from = params.get('from')
+    const to   = params.get('to')
+    const d    = params.get('date')
+    if (from) setOrigin(from)
+    if (to)   setDestination(to)
+    if (d)    setDate(d)
+  }, [params.toString()])
 
   const today    = format(new Date(), 'yyyy-MM-dd')
   const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd')

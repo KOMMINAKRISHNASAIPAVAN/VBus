@@ -36,9 +36,9 @@ export default function SearchPage() {
     const date = params.get('date')
     const pax  = params.get('pax') || 1
     if (from && to && date) {
-      search({ origin: from, destination: to, travel_date: date, passengers: pax })
+      search({ origin: from, destination: to, travel_date: date, passengers: Number(pax) })
     }
-  }, [params.toString()])
+  }, [params.get('from'), params.get('to'), params.get('date'), params.get('pax')])
 
   const from = params.get('from')
   const to   = params.get('to')
