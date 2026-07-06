@@ -450,15 +450,35 @@ export default function AdminPage() {
       await api.post(`/admin/bookings/${b.id}/confirm`)
       toast.success('Booking confirmed')
       reloadBookings(); loadCore()
-      // Send WhatsApp message to user's registered phone
       const seats = (b.passenger_info || []).map(p => p.seat_number).join(', ')
       const phone = (b.passenger_info || [])[0]?.phone
+      // WhatsApp to user — ticket confirmed
       if (phone) {
-        const msg = encodeURIComponent(
-          `✅ VBus Booking Confirmed!\nPNR: ${b.pnr}\nRoute: ${b.boarding_stop} → ${b.dropping_stop}\nSeats: ${seats}\nAmount: ₹${b.total_amount}\nThank you for choosing VBus! 🚌`
+        const userMsg = encodeURIComponent(
+          `✅ *VBus Ticket Confirmed!*
+
+PNR: *${b.pnr}*
+Route: ${b.boarding_stop} → ${b.dropping_stop}
+Seats: ${seats}
+Amount Paid: ₹${b.total_amount}
+
+Your payment has been verified. Have a safe journey! 🚌`
         )
-        window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank')
+        window.open(`https://wa.me/91${phone}?text=${userMsg}`, '_blank')
       }
+      // WhatsApp to admin — payment confirmed log
+      const adminMsg = encodeURIComponent(
+        `✅ *Payment Confirmed*
+
+PNR: *${b.pnr}*
+Route: ${b.boarding_stop} → ${b.dropping_stop}
+Seats: ${seats}
+Amount: ₹${b.total_amount}
+Passenger: ${(b.passenger_info || [])[0]?.name} | +91${phone}
+
+Ticket has been confirmed and sent to user.`
+      )
+      window.open(`https://wa.me/918520998910?text=${adminMsg}`, '_blank')
     } catch (e) { err(e, 'Failed to confirm') }
   }
   const rejectBk = async (b) => {

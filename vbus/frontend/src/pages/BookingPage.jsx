@@ -61,7 +61,6 @@ function Step3Pay({ total, selectedTrip, passengers, selectedSeats, booking, onB
                 <p className="text-xs text-slate-500 mt-3 mb-4 text-center">
                   Scan the QR to pay <b className="text-vbus-700">₹{grandTotal}</b>. After payment, click <b>Request Booking</b>.
                 </p>
-                {/* Dynamic UPI QR — encodes exact amount */}
                 <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
                   <QRCodeSVG
                     value={`upi://pay?pa=8520998910-3@ybl&pn=VBus&am=${grandTotal}&cu=INR&tn=VBus+Ticket`}
@@ -71,17 +70,32 @@ function Step3Pay({ total, selectedTrip, passengers, selectedSeats, booking, onB
                     level="M"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-2">Scan with any UPI app — amount pre-filled</p>
-                {/* PhonePe deep-link button */}
-                <a
-                  href={`phonepe://pay?pa=8520998910-3@ybl&pn=VBus&am=${grandTotal}&cu=INR&tn=VBus+Ticket`}
-                  className="mt-4 w-full flex items-center justify-center gap-2.5 bg-[#5f259f] hover:bg-[#4e1d85] text-white font-semibold text-sm py-3 rounded-xl transition-colors"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M13.547 4.516c-1.03-.23-2.09-.23-3.12 0L7.5 5.25 4.5 12l3 6.75 2.927.734c1.03.23 2.09.23 3.12 0L16.5 18.75l3-6.75-3-6.75-2.953-.734zM12 15.75a3.75 3.75 0 1 1 0-7.5 3.75 3.75 0 0 1 0 7.5z"/>
-                  </svg>
-                  Pay ₹{grandTotal} via PhonePe
-                </a>
+                <p className="text-[11px] text-slate-400 mt-2 mb-4">Scan with any UPI app — amount pre-filled</p>
+                {/* UPI app deep-link buttons */}
+                <div className="grid grid-cols-3 gap-2 w-full">
+                  <a href={`phonepe://pay?pa=8520998910-3@ybl&pn=VBus&am=${grandTotal}&cu=INR&tn=VBus+Ticket`}
+                    className="flex flex-col items-center gap-1.5 bg-[#5f259f] hover:bg-[#4e1d85] text-white font-semibold text-xs py-3 rounded-xl transition-colors">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M13.547 4.516c-1.03-.23-2.09-.23-3.12 0L7.5 5.25 4.5 12l3 6.75 2.927.734c1.03.23 2.09.23 3.12 0L16.5 18.75l3-6.75-3-6.75-2.953-.734zM12 15.75a3.75 3.75 0 1 1 0-7.5 3.75 3.75 0 0 1 0 7.5z"/>
+                    </svg>
+                    PhonePe
+                  </a>
+                  <a href={`tez://upi/pay?pa=8520998910-3@ybl&pn=VBus&am=${grandTotal}&cu=INR&tn=VBus+Ticket`}
+                    className="flex flex-col items-center gap-1.5 bg-[#1a73e8] hover:bg-[#1558b0] text-white font-semibold text-xs py-3 rounded-xl transition-colors">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    GPay
+                  </a>
+                  <a href={`paytmmp://pay?pa=8520998910-3@ybl&pn=VBus&am=${grandTotal}&cu=INR&tn=VBus+Ticket`}
+                    className="flex flex-col items-center gap-1.5 bg-[#00b9f5] hover:bg-[#009fd4] text-white font-semibold text-xs py-3 rounded-xl transition-colors">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="3" width="18" height="18" rx="3"/>
+                      <path d="M7 12h10M12 7v10" stroke="#00b9f5" strokeWidth="2"/>
+                    </svg>
+                    Paytm
+                  </a>
+                </div>
                 <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed mt-3 w-full text-center">
                   After paying, click <b>Request Booking</b> below.
                 </div>
@@ -261,6 +275,52 @@ export default function BookingPage() {
         dropping_stop: selectedTrip.destination.city,
       })
       toast.success('Booking request submitted')
+
+      const phone = passengers[0]?.phone
+      const seats = passengers.map(p => p.seat_number).join(', ')
+      const gst = Math.round(total * 0.05)
+      const grandTotal = total + gst
+      const upiLink = `upi://pay?pa=8520998910-3@ybl&pn=VBus&am=${grandTotal}&cu=INR&tn=VBus+${data.pnr}`
+
+      // WhatsApp to user with payment details
+      if (phone) {
+        const userMsg = encodeURIComponent(
+          `🚌 *VBus Booking Request Received!*
+
+PNR: *${data.pnr}*
+Route: ${selectedTrip.origin.city} → ${selectedTrip.destination.city}
+Date: ${selectedTrip.travel_date}
+Seats: ${seats}
+Amount: *₹${grandTotal}* (incl. 5% GST)
+
+💳 *Payment: UPI / QR*
+Pay to UPI ID: *8520998910-3@ybl*
+Or tap to pay: ${upiLink}
+
+After payment, your ticket will be confirmed by admin. ✅`
+        )
+        window.open(`https://wa.me/91${phone}?text=${userMsg}`, '_blank')
+      }
+
+      // WhatsApp alert to admin
+      const adminMsg = encodeURIComponent(
+        `🔔 *New Booking Request*
+
+PNR: *${data.pnr}*
+Route: ${selectedTrip.origin.city} → ${selectedTrip.destination.city}
+Date: ${selectedTrip.travel_date}
+Bus: ${selectedTrip.bus.name}
+Seats: ${seats}
+Amount: *₹${grandTotal}*
+Passenger: ${passengers[0]?.name} | +91${phone}
+
+Payment Method: UPI / QR
+UPI ID: 8520998910-3@ybl
+
+Please verify payment and confirm the booking.`
+      )
+      window.open(`https://wa.me/918520998910?text=${adminMsg}`, '_blank')
+
       setRequested(data)
     } catch (e) {
       setAlertMsg(e.response?.data?.detail || 'Booking failed. Please try again.')
