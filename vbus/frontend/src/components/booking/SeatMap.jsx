@@ -180,27 +180,32 @@ export default function SeatMap({ seats, layout }) {
   }
 
   // ── SEMI-SLEEPER ──────────────────────────────────────────────────────────
-  // Lower deck: left cols = LB sleeper berths, right cols = Seater chairs
-  // Upper deck: all cols = UB sleeper berths
+  // Left cols: LB block (left_rows) + UB block (left_rows) — independent
+  // Right cols: Seater block (right_seater_rows) + UB block (right_ub_rows) — independent
   if (kind === 'semi_sleeper') {
-    // seats numbered per row: left-LB, right-Seater, all-UB
-    const lbAll = [], seaterAll = [], ubAll = []
-    let idx = 0
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < left;  c++) lbAll.push(sorted[idx++])
-      for (let c = 0; c < right; c++) seaterAll.push(sorted[idx++])
-      for (let c = 0; c < left + right; c++) ubAll.push(sorted[idx++])
-    }
+    const leftRows        = +(layout?.left_rows          ?? rows)
+    const rightSeaterRows = +(layout?.right_seater_rows  ?? rows)
+    const rightUbRows     = +(layout?.right_ub_rows      ?? rows)
 
-    const lbCols     = Array.from({ length: left },         (_, c) => lbAll.filter((_, i) => i % left === c))
-    const seaterCols = Array.from({ length: right },        (_, c) => seaterAll.filter((_, i) => i % right === c))
-    const ubCols     = Array.from({ length: left + right }, (_, c) => ubAll.filter((_, i) => i % (left + right) === c))
+    const mkCols = (arr, cols) => Array.from({ length: cols }, (_, c) =>
+      arr.filter((_, i) => i % cols === c)
+    )
+
+    let idx = 0
+    const lbAll      = sorted.slice(idx, idx + leftRows * left);             idx += leftRows * left
+    const ubLeftAll  = sorted.slice(idx, idx + leftRows * left);             idx += leftRows * left
+    const seaterAll  = sorted.slice(idx, idx + rightSeaterRows * right);     idx += rightSeaterRows * right
+    const ubRightAll = sorted.slice(idx, idx + rightUbRows * right)
+
+    const lbCols      = mkCols(lbAll,      left)
+    const ubLeftCols  = mkCols(ubLeftAll,  left)
+    const seaterCols  = mkCols(seaterAll,  right)
+    const ubRightCols = mkCols(ubRightAll, right)
 
     return (
       <div className="space-y-5">
         <Legend kind={kind} />
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Lower deck */}
           <DeckPanel title="Lower deck" showSteering>
             <div className="flex gap-2 items-start">
               {lbCols.map((col, ci) => (
@@ -216,16 +221,15 @@ export default function SeatMap({ seats, layout }) {
               ))}
             </div>
           </DeckPanel>
-          {/* Upper deck */}
           <DeckPanel title="Upper deck">
             <div className="flex gap-2 items-start">
-              {ubCols.slice(0, left).map((col, ci) => (
+              {ubLeftCols.map((col, ci) => (
                 <div key={ci} className="flex flex-col gap-1.5 flex-1">
                   {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
                 </div>
               ))}
               <Aisle />
-              {ubCols.slice(left).map((col, ci) => (
+              {ubRightCols.map((col, ci) => (
                 <div key={ci} className="flex flex-col gap-1.5 flex-1">
                   {col.map(s => s && <Seat key={s.seat_number} seat={s} selected={sel(s)} onToggle={toggleSeat} type="sleeper" />)}
                 </div>

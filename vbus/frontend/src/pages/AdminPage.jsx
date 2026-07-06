@@ -27,15 +27,22 @@ const LAYOUT_TYPES = [
 
 const DEFAULT_LAYOUT = {
   kind: 'seater', rows: 10, left: 2, right: 2, ladies: 0,
-  sleeper_rows: 5,           // used when kind = semi_sleeper
+  left_rows: 8,        // semi_sleeper: LB+UB rows on left side
+  right_seater_rows: 5, // semi_sleeper: seater rows on right side
+  right_ub_rows: 8,    // semi_sleeper: UB rows on right side
   fares: {}, blocked: [],
 }
 
 const totalOf = (l) => {
-  const rows = +l.rows || 0, left = +l.left || 0, right = +l.right || 0
-  if (l.kind === 'sleeper')      return rows * (left + right) * 2          // all LB+UB
-  if (l.kind === 'semi_sleeper') return rows * left * 2 + rows * right * 2 // left=LB+UB, right=Seater+UB
-  return rows * (left + right)
+  const left = +l.left || 0, right = +l.right || 0
+  if (l.kind === 'sleeper') return (+l.rows || 0) * (left + right) * 2
+  if (l.kind === 'semi_sleeper') {
+    const lr = +l.left_rows || 0
+    const sr = +l.right_seater_rows || 0
+    const ur = +l.right_ub_rows || 0
+    return lr * left * 2 + sr * right + ur * right
+  }
+  return (+l.rows || 0) * (left + right)
 }
 
 // ── Admin layout preview (column-oriented, matches user SeatMap) ────────────
@@ -138,23 +145,34 @@ function LayoutPreview({ lay }) {
 
   if (lay.kind === 'semi_sleeper') {
     n = 0
-    const lbAll = [], seaterAll = [], ubAll = []
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < left;         c++) lbAll.push(mkSeat('lb'))
-      for (let c = 0; c < right;        c++) seaterAll.push(mkSeat('seater'))
-      for (let c = 0; c < left + right; c++) ubAll.push(mkSeat('ub'))
+    const lr = +lay.left_rows || 0
+    const sr = +lay.right_seater_rows || 0
+    const ur = +lay.right_ub_rows || 0
+    const lbAll = [], seaterAll = [], ubLeftAll = [], ubRightAll = []
+    for (let r = 0; r < lr; r++) {
+      for (let c = 0; c < left; c++) lbAll.push(mkSeat('lb'))
     }
-    const lbCols     = Array.from({ length: left },         (_, c) => lbAll.filter((_, i) => i % left === c))
-    const seaterCols = Array.from({ length: right },        (_, c) => seaterAll.filter((_, i) => i % right === c))
-    const ubCols     = Array.from({ length: left + right }, (_, c) => ubAll.filter((_, i) => i % (left + right) === c))
+    for (let r = 0; r < lr; r++) {
+      for (let c = 0; c < left; c++) ubLeftAll.push(mkSeat('ub'))
+    }
+    for (let r = 0; r < sr; r++) {
+      for (let c = 0; c < right; c++) seaterAll.push(mkSeat('seater'))
+    }
+    for (let r = 0; r < ur; r++) {
+      for (let c = 0; c < right; c++) ubRightAll.push(mkSeat('ub'))
+    }
+    const lbCols      = Array.from({ length: left },  (_, c) => lbAll.filter((_, i) => i % left === c))
+    const ubLeftCols  = Array.from({ length: left },  (_, c) => ubLeftAll.filter((_, i) => i % left === c))
+    const seaterCols  = Array.from({ length: right }, (_, c) => seaterAll.filter((_, i) => i % right === c))
+    const ubRightCols = Array.from({ length: right }, (_, c) => ubRightAll.filter((_, i) => i % right === c))
     return (
       <div>{legend}
         <div className="flex gap-3 overflow-x-auto">
-          <DeckBox title="Lower deck">
+          <DeckBox title="Lower deck (Left=LB, Right=Seater)">
             <ColGroup cols={lbCols} /><AisleDivider /><ColGroup cols={seaterCols} />
           </DeckBox>
-          <DeckBox title="Upper deck">
-            <ColGroup cols={ubCols.slice(0, left)} /><AisleDivider /><ColGroup cols={ubCols.slice(left)} />
+          <DeckBox title="Upper deck (Left=UB, Right=UB)">
+            <ColGroup cols={ubLeftCols} /><AisleDivider /><ColGroup cols={ubRightCols} />
           </DeckBox>
         </div>
       </div>
@@ -186,12 +204,37 @@ function LayoutEditor({ lay, set }) {
       </div>
 
       {/* Row config */}
-      <div>
-        <label className={L}>
-          {isSleeper ? 'Rows (each = LB + UB)' : isMixed ? 'Rows (Left: LB+UB | Right: Seater+UB)' : 'Rows'}
-        </label>
-        <input type="number" min="1" value={lay.rows} onChange={e => set({ ...lay, rows: +e.target.value })} className="input-field" />
-      </div>
+      {(isSeater || isSleeper) && (
+        <div>
+          <label className={L}>{isSleeper ? 'Rows (each = LB + UB)' : 'Rows'}</label>
+          <input type="number" min="1" value={lay.rows} onChange={e => set({ ...lay, rows: +e.target.value })} className="input-field" />
+        </div>
+      )}
+      {isMixed && (
+        <div className="space-y-3 border border-slate-100 rounded-xl p-3 bg-slate-50">
+          <p className="text-xs font-semibold text-slate-600">Row counts (Left side vs Right side are independent)</p>
+          <div>
+            <label className={L}>Left rows — LB + UB berths</label>
+            <input type="number" min="1" value={lay.left_rows ?? 8}
+              onChange={e => set({ ...lay, left_rows: +e.target.value })} className="input-field" />
+          </div>
+          <div className="border-t border-slate-200 pt-3">
+            <p className="text-[11px] text-slate-400 mb-2">Right side rows (Seater &amp; UB can differ)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={L}>Right seater rows</label>
+                <input type="number" min="0" value={lay.right_seater_rows ?? 5}
+                  onChange={e => set({ ...lay, right_seater_rows: +e.target.value })} className="input-field" />
+              </div>
+              <div>
+                <label className={L}>Right UB rows</label>
+                <input type="number" min="0" value={lay.right_ub_rows ?? 8}
+                  onChange={e => set({ ...lay, right_ub_rows: +e.target.value })} className="input-field" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Ladies seats */}
       <div>
@@ -245,9 +288,10 @@ function LayoutEditor({ lay, set }) {
         {isSeater  && <span className="text-blue-600">Seater: {(+lay.rows||0)*((+lay.left||0)+(+lay.right||0))}</span>}
         {isSleeper && <span className="text-green-600">LB: {(+lay.rows||0)*((+lay.left||0)+(+lay.right||0))}</span>}
         {isSleeper && <span className="text-amber-600">UB: {(+lay.rows||0)*((+lay.left||0)+(+lay.right||0))}</span>}
-        {isMixed   && <span className="text-blue-600">Seater (right): {(+lay.rows||0)*(+lay.right||0)}</span>}
-        {isMixed   && <span className="text-green-600">LB (left): {(+lay.rows||0)*(+lay.left||0)}</span>}
-        {isMixed   && <span className="text-amber-600">UB (both): {(+lay.rows||0)*((+lay.left||0)+(+lay.right||0))}</span>}
+        {isMixed   && <span className="text-green-600">LB: {(+lay.left_rows||0)*(+lay.left||0)}</span>}
+        {isMixed   && <span className="text-amber-600">UB left: {(+lay.left_rows||0)*(+lay.left||0)}</span>}
+        {isMixed   && <span className="text-blue-600">Seater: {(+lay.right_seater_rows||0)*(+lay.right||0)}</span>}
+        {isMixed   && <span className="text-amber-500">UB right: {(+lay.right_ub_rows||0)*(+lay.right||0)}</span>}
       </div>
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-x-auto">
         <LayoutPreview lay={lay} />

@@ -62,13 +62,17 @@ def _build_seats_for_trip(trip_id: int, bus, base_price: float):
                 ))
 
     elif kind == "semi_sleeper":
-        # Left cols: LB (lower) + UB (upper) per row
-        # Right cols: Seater (lower) + UB (upper) per row
+        # Left cols: LB (lower) rows + UB (upper) rows — independent row count
+        # Right cols: Seater rows + UB rows — independent row counts
         lb_price     = fare("lower",  base_price + 50)
         ub_price     = fare("upper",  base_price + 100)
         seater_price = fare("seater", base_price)
-        for _r in range(rows):
-            # LB row — left cols only
+        left_rows        = int(layout.get("left_rows")        or rows)
+        right_seater_rows = int(layout.get("right_seater_rows") or rows)
+        right_ub_rows    = int(layout.get("right_ub_rows")    or rows)
+
+        # Left LB berths
+        for _r in range(left_rows):
             for _c in range(left):
                 n += 1
                 seats.append(TripSeat(
@@ -76,7 +80,17 @@ def _build_seats_for_trip(trip_id: int, bus, base_price: float):
                     seat_type="lower", deck="lower", price=lb_price,
                     status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
                 ))
-            # Seater row — right cols only
+        # Left UB berths
+        for _r in range(left_rows):
+            for _c in range(left):
+                n += 1
+                seats.append(TripSeat(
+                    trip_id=trip_id, seat_number=str(n),
+                    seat_type="upper", deck="upper", price=ub_price,
+                    status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
+                ))
+        # Right Seater chairs
+        for _r in range(right_seater_rows):
             for _c in range(right):
                 n += 1
                 seats.append(TripSeat(
@@ -84,8 +98,9 @@ def _build_seats_for_trip(trip_id: int, bus, base_price: float):
                     seat_type="seater", deck="lower", price=seater_price,
                     status=SeatStatus.blocked if str(n) in blocked else SeatStatus.available,
                 ))
-            # UB row — all cols (left + right)
-            for _c in range(left + right):
+        # Right UB berths
+        for _r in range(right_ub_rows):
+            for _c in range(right):
                 n += 1
                 seats.append(TripSeat(
                     trip_id=trip_id, seat_number=str(n),
