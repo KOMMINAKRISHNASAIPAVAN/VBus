@@ -533,11 +533,42 @@ Ticket has been confirmed and sent to user.`
       }
     } catch (e) { err(e, 'Failed to reject') }
   }
+  const approveDateChange = async (b) => {
+    try {
+      await api.post(`/admin/bookings/${b.id}/approve_date_change`)
+      toast.success('Date change approved')
+      reloadBookings()
+      const phone = (b.passenger_info || [])[0]?.phone
+      if (phone) {
+        const msg = encodeURIComponent(
+          `✅ *Date Change Approved*\n\nPNR: *${b.pnr}*\nRoute: ${b.boarding_stop} → ${b.dropping_stop}\nNew Travel Date: *${b.requested_date}*\n\nYour date change has been approved. Have a safe journey! 🚌`
+        )
+        window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank')
+      }
+    } catch (e) { err(e, 'Failed to approve date change') }
+  }
+
+  const rejectDateChange = async (b) => {
+    try {
+      await api.post(`/admin/bookings/${b.id}/reject_date_change`)
+      toast.success('Date change rejected')
+      reloadBookings()
+      const phone = (b.passenger_info || [])[0]?.phone
+      if (phone) {
+        const msg = encodeURIComponent(
+          `❌ *Date Change Rejected*\n\nPNR: *${b.pnr}*\nRoute: ${b.boarding_stop} → ${b.dropping_stop}\nRequested Date: ${b.requested_date}\n\nWe could not process your date change. Please contact us for assistance.`
+        )
+        window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank')
+      }
+    } catch (e) { err(e, 'Failed to reject date change') }
+  }
+
   const stBadge = {
     pending:           'bg-amber-100 text-amber-700',
     payment_requested: 'bg-blue-100 text-blue-700',
     payment_done:      'bg-purple-100 text-purple-700',
     confirmed:         'bg-green-100 text-green-700',
+    change_requested:  'bg-orange-100 text-orange-700',
     cancelled:         'bg-red-100 text-red-700',
     completed:         'bg-blue-100 text-blue-700',
   }
@@ -894,6 +925,15 @@ Ticket has been confirmed and sent to user.`
                             <div className="flex gap-2">
                               <button onClick={() => markPaymentReceived(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700">Payment Received</button>
                               <button onClick={() => rejectBk(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Reject</button>
+                            </div>
+                          )}
+                          {b.status === 'change_requested' && (
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs text-orange-600 font-medium">New date: {b.requested_date}</span>
+                              <div className="flex gap-2">
+                                <button onClick={() => approveDateChange(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700">Approve</button>
+                                <button onClick={() => rejectDateChange(b)} className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Reject</button>
+                              </div>
                             </div>
                           )}
                           {(b.status === 'confirmed' || b.status === 'cancelled' || b.status === 'completed') && (

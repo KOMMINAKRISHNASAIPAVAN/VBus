@@ -140,10 +140,10 @@ export default function Navbar() {
             )}
 
             <div className="border-t border-slate-200 pt-2 mt-2 flex gap-2">
-              <a href="tel:+919391225511" className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700">
+              <a href="tel:+918520998910" className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700">
                 <Phone className="w-4 h-4 text-vbus-600" /> Call
               </a>
-              <a href="https://wa.me/919391225511" target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/918520998910" target="_blank" rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#25D366] text-sm font-semibold text-white">
                 <WhatsAppIcon className="w-4 h-4" /> WhatsApp
               </a>

@@ -21,7 +21,7 @@ function getReply(text) {
   if (/(price|fare|cost|cheap)/.test(t))
     return "Fares vary by seat type and route. Popular routes start around ₹350 (Mumbai–Pune) to ₹1200 (Hyderabad–Mumbai)."
   if (/(human|agent|call|phone|whatsapp|support|contact)/.test(t))
-    return "Sure! Call us at +91 93912 25511 or tap WhatsApp from the contact button. Our team is happy to help."
+    return "Sure! Call us at +91 8520998910 or tap WhatsApp from the contact button. Our team is happy to help."
   if (/(route|city|cities|destination)/.test(t))
     return "We cover 500+ routes across 80+ cities — Hyderabad, Bangalore, Chennai, Mumbai, Delhi, Pune and more. Try the search box on the home page!"
   if (/(hi|hello|hey|thanks|thank)/.test(t))

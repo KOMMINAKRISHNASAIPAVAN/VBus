@@ -6,7 +6,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.bus import Booking, Trip, TripSeat, SeatStatus, BookingStatus
-from app.schemas import BookingCreate, BookingOut, BookingDetail
+from app.schemas import BookingCreate, BookingOut, BookingDetail, ChangeDateRequest
 from app.kafka.producer import publish_booking_event, publish_seat_event
 
 router = APIRouter()
@@ -155,4 +155,25 @@ def cancel_booking(
     publish_booking_event("booking_cancelled", booking)
     publish_seat_event("seat_released", booking.trip_id, seat_numbers)
 
+    return booking
+
+@router.patch("/{booking_id}/change_date", response_model=BookingDetail)
+def change_booking_date(
+    booking_id: int,
+    data: ChangeDateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    booking = db.query(Booking).filter(
+        Booking.id == booking_id,
+        Booking.user_id == current_user.id,
+    ).first()
+    if not booking:
+        raise HTTPException(404, "Booking not found")
+    if booking.status != BookingStatus.confirmed:
+        raise HTTPException(400, "Only confirmed bookings can request a date change")
+    booking.status = BookingStatus.change_requested
+    booking.requested_date = data.new_date
+    db.commit()
+    db.refresh(booking)
     return booking

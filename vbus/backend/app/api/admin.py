@@ -299,6 +299,7 @@ def all_bookings(db: Session = Depends(get_db), admin: User = Depends(get_admin_
             "boarding_stop": b.boarding_stop, "dropping_stop": b.dropping_stop,
             "booked_at": b.booked_at, "trip_id": b.trip_id,
             "bus_name": bus_name,
+            "requested_date": b.requested_date,
         })
     return result
 
@@ -367,6 +368,25 @@ def reject_booking(booking_id: int, db: Session = Depends(get_db), admin: User =
     db.commit(); db.refresh(b)
     publish_booking_event("booking_rejected", b)
     publish_seat_event("seat_released", b.trip_id, seat_numbers)
+    return b
+
+@router.post("/bookings/{booking_id}/approve_date_change")
+def approve_date_change(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
+    b = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not b or b.status != BookingStatus.change_requested:
+        raise HTTPException(404, "Booking not found or not in change_requested status")
+    b.status = BookingStatus.confirmed
+    db.commit(); db.refresh(b)
+    return b
+
+@router.post("/bookings/{booking_id}/reject_date_change")
+def reject_date_change(booking_id: int, db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
+    b = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not b or b.status != BookingStatus.change_requested:
+        raise HTTPException(404, "Booking not found or not in change_requested status")
+    b.status = BookingStatus.confirmed
+    b.requested_date = None
+    db.commit(); db.refresh(b)
     return b
 
 # ── Users ─────────────────────────────────────────────────────────────────────

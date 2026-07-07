@@ -23,6 +23,7 @@ class BookingStatus(str, enum.Enum):
     payment_requested = "payment_requested"
     payment_done      = "payment_done"
     confirmed         = "confirmed"
+    change_requested  = "change_requested"
     cancelled         = "cancelled"
     completed         = "completed"
 
@@ -127,6 +128,7 @@ class Booking(Base):
     passenger_info = Column(JSON, nullable=False)
     boarding_stop  = Column(String(100), nullable=True)
     dropping_stop  = Column(String(100), nullable=True)
+    requested_date = Column(String(20), nullable=True)   # user-requested new travel date
     booked_at      = Column(DateTime(timezone=True), server_default=func.now())
     user           = relationship("User", back_populates="bookings")
     trip           = relationship("Trip", back_populates="bookings")

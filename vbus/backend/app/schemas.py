@@ -116,6 +116,7 @@ class BookingOut(BaseModel):
     passenger_info: Any
     boarding_stop: Optional[str]
     dropping_stop: Optional[str]
+    requested_date: Optional[str] = None
     booked_at: datetime
     class Config: from_attributes = True
 
@@ -201,3 +202,6 @@ class SeatBlockRequest(BaseModel):
     seat_numbers: List[str]
     trip_id: int
     action: str  # "block" or "unblock"
+
+class ChangeDateRequest(BaseModel):
+    new_date: str  # YYYY-MM-DD

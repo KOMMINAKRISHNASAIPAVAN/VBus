@@ -11,6 +11,7 @@ const STATUS_META = {
   payment_requested: { label: 'Pay Now',            cls: 'text-blue-700 bg-blue-50 border-blue-200',      desc: 'Admin has confirmed your booking. Please pay and click "I\'ve Paid".' },
   payment_done:      { label: 'Payment Submitted',  cls: 'text-purple-700 bg-purple-50 border-purple-200', desc: 'Admin is verifying your payment.' },
   confirmed:         { label: 'Confirmed',          cls: 'text-green-700 bg-green-50 border-green-200',   desc: null },
+  change_requested:  { label: 'Date Change Pending', cls: 'text-orange-700 bg-orange-50 border-orange-200', desc: 'Your date change request is being reviewed by admin.' },
   cancelled:         { label: 'Cancelled',          cls: 'text-red-700 bg-red-50 border-red-200',         desc: null },
   completed:         { label: 'Completed',          cls: 'text-slate-700 bg-slate-50 border-slate-200',   desc: null },
 }
@@ -47,6 +48,14 @@ export default function MyTripsPage() {
       setBookings(b => b.map(x => x.id === id ? data : x))
       toast.success('Booking cancelled — refund initiated')
       setCancellingId(null)
+      // Notify admin via WhatsApp
+      const bk = bookings.find(b => b.id === id)
+      const seats = (bk?.passenger_info || []).map(p => p.seat_number).join(', ')
+      const phone = (bk?.passenger_info || [])[0]?.phone
+      const msg = encodeURIComponent(
+        `❌ *Booking Cancelled by User*\n\nPNR: *${bk?.pnr}*\nRoute: ${bk?.boarding_stop} → ${bk?.dropping_stop}\nSeats: ${seats}\nAmount: ₹${bk?.total_amount}\nPassenger: ${(bk?.passenger_info || [])[0]?.name} | +91${phone}\n\nPlease process the refund.`
+      )
+      window.open(`https://wa.me/918520998910?text=${msg}`, '_blank')
     } catch { toast.error('Cancellation failed') }
   }
 
@@ -54,12 +63,18 @@ export default function MyTripsPage() {
     if (!newDate) return toast.error('Please select a new date')
     setChangingId(booking.id)
     try {
-      // Update departure_date on the booking via API (or just show success for now)
-      await api.patch(`/bookings/${booking.id}/change_date`, { new_date: newDate })
-      toast.success('Travel date changed successfully!')
-    } catch {
-      // If endpoint doesn't exist yet, show success UI anyway
+      const { data } = await api.patch(`/bookings/${booking.id}/change_date`, { new_date: newDate })
+      setBookings(b => b.map(x => x.id === booking.id ? data : x))
       toast.success('Date change request submitted!')
+      // Notify admin via WhatsApp
+      const seats = (booking.passenger_info || []).map(p => p.seat_number).join(', ')
+      const phone = (booking.passenger_info || [])[0]?.phone
+      const msg = encodeURIComponent(
+        `📅 *Date Change Request*\n\nPNR: *${booking.pnr}*\nRoute: ${booking.boarding_stop} → ${booking.dropping_stop}\nSeats: ${seats}\nNew Date: *${newDate}*\nPassenger: ${(booking.passenger_info || [])[0]?.name} | +91${phone}\n\nPlease approve or reject in Admin → Bookings.`
+      )
+      window.open(`https://wa.me/918520998910?text=${msg}`, '_blank')
+    } catch {
+      toast.error('Date change request failed')
     } finally {
       setChangingId(null)
       setChangeDateId(null)
