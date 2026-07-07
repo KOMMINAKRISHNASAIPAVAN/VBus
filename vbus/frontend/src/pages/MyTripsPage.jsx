@@ -321,7 +321,7 @@ export default function MyTripsPage() {
                   {/* Action buttons */}
                   <div className="flex gap-2 flex-wrap">
                     <button
-                      onClick={() => effectiveStatus === 'confirmed' && navigate(`/ticket/${booking.pnr}`)}
+                      onClick={() => booking.status === 'confirmed' && navigate(`/ticket/${booking.pnr}`)}
                       disabled={booking.status !== 'confirmed'}
                       className={`flex-1 text-sm py-2 rounded-xl border font-medium transition-colors ${
                         booking.status === 'confirmed'
