@@ -99,7 +99,14 @@ def my_bookings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return db.query(Booking).filter(Booking.user_id == current_user.id).order_by(Booking.booked_at.desc()).all()
+    bookings = db.query(Booking).filter(Booking.user_id == current_user.id).order_by(Booking.booked_at.desc()).all()
+    result = []
+    for b in bookings:
+        trip = db.query(Trip).filter(Trip.id == b.trip_id).first()
+        item = BookingDetail.from_orm(b)
+        item.travel_date = str(trip.travel_date) if trip else None
+        result.append(item)
+    return result
 
 @router.get("/{pnr}", response_model=BookingDetail)
 def get_booking(pnr: str, db: Session = Depends(get_db)):

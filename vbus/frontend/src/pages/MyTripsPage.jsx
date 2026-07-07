@@ -13,7 +13,7 @@ const STATUS_META = {
   confirmed:         { label: 'Confirmed',          cls: 'text-green-700 bg-green-50 border-green-200',   desc: null },
   change_requested:  { label: 'Date Change Pending', cls: 'text-orange-700 bg-orange-50 border-orange-200', desc: 'Your date change request is being reviewed by admin.' },
   cancelled:         { label: 'Cancelled',          cls: 'text-red-700 bg-red-50 border-red-200',         desc: null },
-  completed:         { label: 'Completed',          cls: 'text-slate-700 bg-slate-50 border-slate-200',   desc: null },
+  completed:         { label: 'Completed',          cls: 'text-slate-700 bg-slate-50 border-slate-200',   desc: 'This trip has been completed.' },
 }
 
 const REFUND_TIMELINE = [
@@ -217,9 +217,16 @@ export default function MyTripsPage() {
         ) : (
           <div className="space-y-4">
             {bookings.map((booking, i) => {
-              const meta = STATUS_META[booking.status] || STATUS_META.pending
+              const today = new Date(); today.setHours(0,0,0,0)
+              const travelDate = booking.travel_date ? new Date(booking.travel_date) : null
+              const isPast = travelDate && travelDate < today
+              // Treat confirmed past trips as completed visually
+              const effectiveStatus = (booking.status === 'confirmed' && isPast) ? 'completed' : booking.status
+              const meta = STATUS_META[effectiveStatus] || STATUS_META.pending
               const isPaymentRequested = booking.status === 'payment_requested'
               const upiLink = `upi://pay?pa=8520998910-3@ybl&pn=VBus&am=${booking.total_amount}&cu=INR&tn=VBus+${booking.pnr}`
+              // Only allow change/cancel if trip is in the future
+              const canModify = booking.status === 'confirmed' && !isPast
 
               return (
                 <motion.div key={booking.id}
@@ -249,8 +256,14 @@ export default function MyTripsPage() {
                   <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
-                      {new Date(booking.booked_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+                      Booked: {new Date(booking.booked_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
                     </span>
+                    {booking.travel_date && (
+                      <span className="flex items-center gap-1 font-medium text-slate-600">
+                        <Bus className="w-3.5 h-3.5" />
+                        Travel: {new Date(booking.travel_date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+                      </span>
+                    )}
                   </div>
 
                   {/* Status description banner */}
@@ -308,7 +321,7 @@ export default function MyTripsPage() {
                   {/* Action buttons */}
                   <div className="flex gap-2 flex-wrap">
                     <button
-                      onClick={() => booking.status === 'confirmed' && navigate(`/ticket/${booking.pnr}`)}
+                      onClick={() => effectiveStatus === 'confirmed' && navigate(`/ticket/${booking.pnr}`)}
                       disabled={booking.status !== 'confirmed'}
                       className={`flex-1 text-sm py-2 rounded-xl border font-medium transition-colors ${
                         booking.status === 'confirmed'
@@ -316,9 +329,9 @@ export default function MyTripsPage() {
                           : 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'
                       }`}
                     >
-                      {booking.status === 'confirmed' ? 'View Ticket' : 'Ticket not ready yet'}
+                      {booking.status === 'confirmed' ? 'View Ticket' : effectiveStatus === 'completed' ? 'Trip Completed' : 'Ticket not ready yet'}
                     </button>
-                    {booking.status === 'confirmed' && (
+                    {canModify && (
                       <>
                         <button onClick={() => { setChangeDateId(booking.id); setNewDate('') }}
                           className="flex items-center gap-1 px-3 py-2 text-sm text-blue-600 border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors">

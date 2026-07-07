@@ -122,6 +122,7 @@ class BookingOut(BaseModel):
 
 class BookingDetail(BookingOut):
     trip_id: int
+    travel_date: Optional[str] = None
     class Config: from_attributes = True
 
 # ── Stops ─────────────────────────────────────────
