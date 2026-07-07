@@ -20,7 +20,7 @@ export const DESTINATIONS = {
       { name: 'Birla Mandir', desc: 'A serene marble temple offering panoramic views of the city.' },
       { name: 'Hussain Sagar Lake', desc: 'A picturesque spot with a massive Buddha statue at its centre.' },
     ],
-    services: ['Vijayawada', 'Guntur', 'Bangalore', 'Eluru', 'Tirupati', 'Visakhapatnam', 'Chennai', 'Mumbai', 'Rajahmundry'],
+    services: ['Vijayawada', 'Guntur', 'Eluru', 'Bangalore', 'Chennai', 'Mumbai', 'Visakhapatnam', 'Rajahmundry'],
   },
   bangalore: {
     name: 'Bangalore',
@@ -53,7 +53,7 @@ export const DESTINATIONS = {
       { name: 'Fort St. George', desc: 'India\'s first British fortress, now housing a museum.' },
       { name: 'Santhome Basilica', desc: 'A neo-Gothic church built over the tomb of St. Thomas.' },
     ],
-    services: ['Bangalore', 'Hyderabad', 'Tirupati'],
+    services: ['Bangalore', 'Hyderabad'],
   },
   tirupati: {
     name: 'Tirupati',
@@ -85,7 +85,7 @@ export const DESTINATIONS = {
       { name: 'Submarine Museum', desc: 'A real decommissioned submarine turned museum.' },
       { name: 'Araku Valley', desc: 'A scenic hill station famous for coffee plantations.' },
     ],
-    services: ['Vijayawada', 'Hyderabad', 'Rajahmundry', 'Guntur', 'Eluru'],
+    services: ['Vijayawada', 'Hyderabad'],
   },
   mumbai: {
     name: 'Mumbai',
@@ -117,7 +117,7 @@ export const DESTINATIONS = {
       { name: 'Fort Aguada', desc: 'A 17th-century Portuguese fort overlooking the sea.' },
       { name: 'Dudhsagar Falls', desc: 'A spectacular four-tiered waterfall in the Ghats.' },
     ],
-    services: ['Mumbai', 'Pune'],
+    services: ['Mumbai'],
   },
   kerala: {
     name: 'Kerala',
@@ -149,7 +149,7 @@ export const DESTINATIONS = {
       { name: 'City Palace', desc: 'A royal complex blending Rajput and Mughal styles.' },
       { name: 'Jantar Mantar', desc: 'A UNESCO-listed astronomical observatory.' },
     ],
-    services: ['Delhi'],
+    services: [],
   },
   delhi: {
     name: 'Delhi',
@@ -165,7 +165,7 @@ export const DESTINATIONS = {
       { name: 'Qutub Minar', desc: 'The world\'s tallest brick minaret, a UNESCO site.' },
       { name: 'Lotus Temple', desc: 'A serene, flower-shaped Bahá\'í house of worship.' },
     ],
-    services: ['Mumbai'],
+    services: ['Pune', 'Hyderabad'],
   },
   agra: {
     name: 'Agra',
@@ -181,7 +181,7 @@ export const DESTINATIONS = {
       { name: 'Fatehpur Sikri', desc: 'A perfectly preserved Mughal ghost city nearby.' },
       { name: 'Mehtab Bagh', desc: 'Riverside gardens with the best Taj sunset views.' },
     ],
-    services: ['Delhi'],
+    services: [],
   },
   amritsar: {
     name: 'Amritsar',
@@ -196,7 +196,7 @@ export const DESTINATIONS = {
       { name: 'Jallianwala Bagh', desc: 'A poignant memorial garden of national importance.' },
       { name: 'Wagah Border', desc: 'The famous flag-lowering ceremony at dusk.' },
     ],
-    services: ['Delhi'],
+    services: [],
   },
   manali: {
     name: 'Manali',
@@ -212,7 +212,7 @@ export const DESTINATIONS = {
       { name: 'Hadimba Temple', desc: 'An ancient cedar-wood temple in the forest.' },
       { name: 'Old Manali', desc: 'Charming lanes full of cafes and craft shops.' },
     ],
-    services: ['Delhi'],
+    services: [],
   },
 }
 
