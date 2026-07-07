@@ -11,16 +11,33 @@ Base.metadata.create_all(bind=engine)
 # Lightweight idempotent migrations for pre-existing tables (MySQL & Postgres)
 _is_pg = settings.DATABASE_URL.startswith("postgres")
 _json_type = "JSONB" if _is_pg else "JSON"
-for _stmt in (
-    "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE",
-    f"ALTER TABLE buses ADD COLUMN layout {_json_type}",
-    f"ALTER TABLE buses ADD COLUMN operator VARCHAR(100)",
-    f"ALTER TABLE routes ADD COLUMN via_stops {_json_type}",
+
+# DDL statements that must NOT run inside a transaction (Postgres enum changes)
+_enum_stmts = (
     "ALTER TYPE seatstatus ADD VALUE IF NOT EXISTS 'blocked'",
     "ALTER TYPE seatstatus ADD VALUE IF NOT EXISTS 'ladies'",
     "ALTER TYPE bookingstatus ADD VALUE IF NOT EXISTS 'payment_requested'",
     "ALTER TYPE bookingstatus ADD VALUE IF NOT EXISTS 'payment_done'",
-):
+    "ALTER TYPE bookingstatus ADD VALUE IF NOT EXISTS 'change_requested'",
+) if _is_pg else ()
+
+# Regular DDL that can run inside a transaction
+_col_stmts = (
+    "ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE",
+    f"ALTER TABLE buses ADD COLUMN layout {_json_type}",
+    f"ALTER TABLE buses ADD COLUMN operator VARCHAR(100)",
+    f"ALTER TABLE routes ADD COLUMN via_stops {_json_type}",
+    "ALTER TABLE bookings ADD COLUMN requested_date VARCHAR(20)",
+)
+
+for _stmt in _enum_stmts:
+    try:
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            conn.execute(text(_stmt))
+    except Exception:
+        pass
+
+for _stmt in _col_stmts:
     try:
         with engine.begin() as conn:
             conn.execute(text(_stmt))
