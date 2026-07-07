@@ -32,11 +32,11 @@ const OFFERS = [
 ]
 
 const WHATS_NEW = [
-  { icon: CalendarClock, title: 'Free Date Change', desc: 'Change your travel date at no extra cost.' },
-  { icon: ShieldCheck,   title: 'Assurance Program', desc: 'Insure your trip against cancellations and accidents.' },
-  { icon: Gift,          title: 'Refer & Earn', desc: 'Exciting rewards are only a tap away!' },
-  { icon: Star,          title: 'VBus Primo', desc: 'On-time trips with unmatched comfort, always.' },
-  { icon: Zap,           title: 'Lightning Refund', desc: 'Get instant refunds for your cancellations.' },
+  { icon: CalendarClock, title: 'Free Date Change',   desc: 'Change your travel date at no extra cost.',                slug: 'free-date-change' },
+  { icon: ShieldCheck,   title: 'Assurance Program',  desc: 'Insure your trip against cancellations and accidents.',    slug: 'assurance-program' },
+  { icon: Gift,          title: 'Refer & Earn',        desc: 'Exciting rewards are only a tap away!',                    slug: 'refer-and-earn' },
+  { icon: Star,          title: 'VBus Primo',          desc: 'On-time trips with unmatched comfort, always.',            slug: 'vbus-primo' },
+  { icon: Zap,           title: 'Lightning Refund',    desc: 'Get instant refunds for your cancellations.',              slug: 'lightning-refund' },
 ]
 
 const OPERATORS = [
@@ -468,8 +468,9 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h2 className="font-display text-3xl font-bold text-slate-900 mb-6">What's New</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {WHATS_NEW.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="glass-card p-6 hover:border-vbus-300 hover:shadow-lift transition-all group">
+          {WHATS_NEW.map(({ icon: Icon, title, desc, slug }) => (
+            <Link key={title} to={`/feature/${slug}`}
+              className="glass-card p-6 hover:border-vbus-300 hover:shadow-lift transition-all group block">
               <div className="w-12 h-12 rounded-2xl bg-vbus-100 flex items-center justify-center mb-4 group-hover:bg-vbus-600 transition-colors">
                 <Icon className="w-6 h-6 text-vbus-600 group-hover:text-white transition-colors" />
               </div>
@@ -478,7 +479,7 @@ export default function HomePage() {
               <span className="text-sm font-medium text-vbus-600 inline-flex items-center gap-1 group-hover:gap-2 transition-all">
                 Know More <ArrowRight className="w-4 h-4" />
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

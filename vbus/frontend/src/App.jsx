@@ -18,6 +18,7 @@ import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 import MyTripsPage from './pages/MyTripsPage'
 import AdminPage from './pages/AdminPage'
+import FeaturePage from './pages/FeaturePage'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuthStore()
@@ -56,6 +57,7 @@ function Shell() {
           <Route path="/profile"      element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/my-trips"     element={<ProtectedRoute><MyTripsPage /></ProtectedRoute>} />
           <Route path="/admin"        element={<AdminRoute><AdminPage /></AdminRoute>} />
+          <Route path="/feature/:slug" element={<FeaturePage />} />
         </Routes>
       </main>
       {!isAuthPage && <Footer />}
